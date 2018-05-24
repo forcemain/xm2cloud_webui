@@ -1,0 +1,161 @@
+{% load static %}
+
+<table id="host_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_list = "{% url 'xm2cloud_cmp:hosts' %}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,host_create = "{% url 'xm2cloud_cmp:host_create' %}"
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,host_detail = "{% url 'xm2cloud_cmp:host_detail' id=0 %}"
+        ,host_update = "{% url 'xm2cloud_cmp:host_update' id=0 %}"
+        ,host_delete = "{% url 'xm2cloud_cmp:host_delete' id=0 %}"
+        ,hostgroup_manage = "{% url 'xm2cloud_cmp:hostgroup_manage' %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['hostSearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click').bind('click', function () {
+            var that = this
+                ,name = $(that).attr('name');
+
+            var options = {}
+                ,selected = $('#host_datagrid').datagrid('getSelected');
+            switch (name){
+                case 'add':
+                    options.href = host_create;
+                    break;
+                case 'edit':
+                    if(!selected){
+                        options.href = host_list;
+                        break;
+                    }
+                    options.href = host_update.replace('/0/', '/'+selected.id+'/');
+                    break;
+                case 'del':
+                    if(!selected){
+                        options.href = host_list;
+                        break;
+                    }
+                    options.href = host_delete.replace('/0/', '/'+selected.id+'/');
+                    break;
+            }
+            $._control('#control', options);
+        });
+        $._datagrid('#host_datagrid', {
+            url: host_list_api,
+            onLoadSuccess: function (data) {
+                var row_num = $(this).datagrid('getRows').length;
+                for(var i=0; i<row_num; i++){
+                    var mbutton_id = 'mb_host_'+i;
+                    $('#'+mbutton_id).menubutton({menu: '#mt_host_'+i});
+                }
+
+                $('.host-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                });
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'name',width:'10%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = host_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="host-detail link-underline">'+value+'</a>'
+                    }
+                },
+                {
+                    field:'monitor',width:'3%',title:'监控',align:'center',
+                    formatter: function(value, row, index){
+                        return '<i class="fa fa-line-chart font-red"></i>'
+                    }
+                },
+                {
+                    field:'check_state',width:'4%',title:'状态',
+                    formatter: function(value, row, index){
+                        var state = '<a class="font-green">运行中</a>';
+                        if(!row.checkstate){
+                            state = '<a class="font-red">不可达</a>';
+                        }
+                        return state;
+                    }
+                },
+                {
+                    field:'vmos',width:'8%',title:'镜像',sortable:true
+                },
+                {
+                    field:'spec',width:'5%',title:'配置',
+                    formatter: function(value, row, index){
+                        return row.vmcpu+'核 '+row.vmmem+'G';
+                    }
+                },
+                {
+                    field:'binds',width:'4%',title:'网络',align:'center',
+                    formatter: function(value, row, index){
+                        var _t = host_manage+"?hostId="+row.id+"&navName=ipline";
+                        return '<a target="_blank" href="'+_t+'" class="ipline-list link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'hostgroups',width:'4%',title:'业务',align:'center',
+                    formatter: function(value, row, index){
+                        var _t = hostgroup_manage+"?hostId="+row.id;
+                        return '<a target="_blank" href="'+_t+'" class="ipline-list link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'expiry_time',width:'10%',title:'过期时间',sortable:true
+                },
+                {
+                    field:'agent_state',width:'8%',title:'心跳状态',align:'center',
+                    formatter: function(value, row, index){
+                        var state = '<a class="font-green">正常</a>';
+                        if(!row.agentstate){
+                            state = '<a class="font-grayish">N/A</a>';
+                        }
+                        return state;
+                    }
+                },
+                {
+                    field:'agent_update',width:'8%',title:'AGENT',align:'center',
+                    formatter: function(value, row, index){
+                        var state = '<a class="link-underline font-green">运行中</a>';
+                        if(!row.agentstate){
+                            state = '<a class="link-underline font-red">需升级</a>';
+                        }
+                        return state;
+                    }
+                },
+                {
+                    field:'exception',width:'5%',title:'异常',sortable:true,
+                    formatter: function(value, row, index){
+                        return '<a class="link-underline font-red">待确认</a>';
+                    }
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_host_'+index+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_host_'+index+'" style="display: none;">'
+                                  + '<div>参数设置</div>'
+                                  + '<div>远程登陆</div>'
+                                  + '<div>执行记录</div>'
+                                  + '<div>灰度发布</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

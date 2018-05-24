@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html {% block  html_attribs %}{% endblock %}>
+{% block html %}
+    <head>
+    {% block head %}
+        {% block meta %}
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="XM2CLOUD 是一款由XM自研的自动化运维管理平台软件，能够帮助企业方便的管理云资源,控好云成本,用好云服务.">
+        <meta name="keywords" content="云配置管理平台,云费用管理平台,云监控管理平台,云DEVOPS协作平台">
+        <meta name="author" content="xmdevops@vip.qq.com">
+        {% endblock %}
+        <link rel="shortcut icon" type="image/x-icon" href="{% static 'xm2cloud_auth/img/favicon.ico' %}">
+        <link rel="icon" type="image/x-icon" href="{% static 'xm2cloud_auth/img/favicon.ico' %}">
+        <title>{{ title|default:'XM2CLOUD - 简约而不简单的运维管理平台' }}</title>
+        {% block styles %}
+		<link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_auth/js/insdep/insdep.easyui.min.css' %}"/>
+		<link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_auth/js/insdep/icon.css' %}" />
+		<link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_auth/css/font-awesome/css/font-awesome.min.css' %}" />
+		<link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_auth/js/insdep/insdep.theme.css' %}" />
+        <link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_auth/css/main.css' %}" />
+        {% endblock %}
+		<script type="text/javascript" src="{% static 'xm2cloud_auth/js/insdep/jquery.min.js' %}"></script>
+		<script type="text/javascript" src="{% static 'xm2cloud_auth/js/insdep/jquery.easyui.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'xm2cloud_auth/js/main.js' %}"></script>
+    {% endblock %}
+    </head>
+    <body {% block body_attribs %}{% endblock %}>
+        <div id="container" class="easyui-layout" fit="true">
+            {% block container %}
+            {% endblock %}
+        </div>
+        {% block scripts %}
+            <script type="text/javascript">
+                $('li.dropdown-menu').on('click', function(){
+                    var left = $(this).offset().left
+                        ,top = 50
+                        ,target = $(this).attr('_t');
+                    if(!target) return;
+                    $('#'+target).menu('show', {left: left, top: top, hideOnUnhover: true});
+                });
+            </script>
+        {% endblock %}
+    </body>
+{% endblock %}
+</html>
+

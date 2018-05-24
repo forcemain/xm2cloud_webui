@@ -1,0 +1,148 @@
+{% load static %}
+
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>基本资料</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">账户编号 : </div>
+                <div class="lf form-input">{{ request.user.pk }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">账户名称 : </div>
+                <div class="lf form-input">{{ request.user.username }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">密保邮箱 : </div>
+                <div class="lf form-input">
+                    {% if request.user.email %}
+                        <a href="mailto:{{ request.user.email }}" class="link-underline">{{ request.user.email }}</a>
+                    {% else %}
+                        <a href="#" class="link-underline"><span class="font-red">未绑定</span></a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">创建时间 : </div>
+                <div class="lf form-input">{{ request.user.date_joined|date:"Y-m-d H:i:s" }}</div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+        <fieldset>
+            <legend>资源信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">主机分配 : </div>
+                <div class="lf form-input"><a href="#" class="link">1</a> 台</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">容器分配 : </div>
+                <div class="lf form-input"><a href="#" class="link">1</a> 台</div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+        <fieldset>
+            <legend>联系信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">所在国家 : </div>
+                <div class="lf form-input">
+                    <input id="nationality" name="nationality" class="easyui-textbox" value="{{ request.user.profile.nationality }}" data-options="width:'380',height:'32',disabled:true">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label"><span class="font-red">*</span> 所在地区 : </div>
+                <div class="lf form-input">
+                    <div id="distpicker">
+                        <select id="province" name="province"></select>
+                        <select id="city" name="city"></select>
+                        <select id="district" name="district"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">街道地址 : </div>
+                <div class="lf form-input">
+                    <input id="address" name="address" class="easyui-textbox" value="{{ request.user.profile.address }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">联系电话 : </div>
+                <div class="lf form-input">
+                    <input id="telephone" name="telephone" class="easyui-textbox" value="{{ request.user.profile.telephone }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="profile_update" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_auth/js/distpicker.min.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,city = "{{ request.user.profile.city }}"
+        ,province = "{{ request.user.profile.province }}"
+        ,district = "{{ request.user.profile.district }}"
+        ,user_profile_id = "{{ request.user.profile.pk }}"
+        ,profile_update_api = "{% url 'xm2cloud_auth:api_profile_update' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        $("#distpicker").distpicker({
+            province: province,
+            city: city,
+            district: district
+        });
+        $("#province").combobox({width: 124, height: 32});
+        $("#city").combobox({width: 125, height: 32});
+        $("#district").combobox({width: 125, height: 32});
+
+        var _html;
+        var _load;
+        $('#profile_update').on('click', function () {
+            var that = this
+                ,nationality = $('#nationality').textbox('getValue')
+                ,province  = $('#province').combobox('getValue')
+                ,city = $('#city').combobox('getValue')
+                ,district = $('#district').combobox('getValue')
+                ,address = $('#address').textbox('getValue')
+                ,telephone = $('#telephone').textbox('getValue');
+
+            if(!_html) _html = $(that).find('span:last').html();
+            _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+            $(that).find('span:last').html(_load);
+            var profile_update_url = profile_update_api.replace('/0/', '/'+user_profile_id+'/');
+            $._ajax({
+                url: profile_update_url,
+                error_width: 501,
+                success: function (data) {
+                    console.log(location.href+':'+data);
+                    // location.href = data.next;
+                    $('#control').panel('refresh');
+                },
+                complete: function () {
+                    $(that).find('span:last').html(_html);
+                },
+                data: {nationality: nationality, province: province, city: city, district: district, address: address, telephone: telephone}
+            })
+        });
+    });
+</script>

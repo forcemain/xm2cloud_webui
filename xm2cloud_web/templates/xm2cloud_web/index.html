@@ -1,0 +1,33 @@
+{% extends 'xm2cloud_web/_base.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <style type="text/css">
+        .body-container .wrap-banner {
+            background-size: cover !important;
+            background: url({% static "xm2cloud_web/img/main_banner.png" %}) no-repeat center;
+        }
+    </style>
+{% endblock %}
+
+{% block container %}
+    <div class="head">
+        <div class="navbar navbar-default navbar-fixed-top">
+            {% include 'xm2cloud_web/_head.html' %}
+        </div>
+    </div>
+    <div class="body">
+        <div class="body-container">
+            <div class="wrap-banner">
+                <p class="title">简约而不简单的运维管理平台</p>
+                <p class="describe">易运维, 易监控, 告警准</p>
+            </div>
+            <div class="wrap-content">
+            </div>
+        </div>
+    </div>
+    <div class="foot">
+        {% include 'xm2cloud_web/_foot.html' %}
+    </div>
+{% endblock %}

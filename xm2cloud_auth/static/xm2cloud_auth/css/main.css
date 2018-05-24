@@ -1,0 +1,355 @@
+::-webkit-scrollbar{
+    display: none;
+}
+.lf {
+    float: left;
+}
+.rt {
+    float: right;
+}
+.hide {
+    display: none;
+}
+.clear {
+    clear: both;
+}
+.text-center {
+    text-align: center;
+}
+.font-link {
+    color: #57a3f3;
+}
+.link:hover {
+    border-bottom: dotted 1px #039;
+}
+.link-underline {
+    border-bottom: dotted 1px #039;
+}
+.no-border-radius {
+    border-radius: 0;
+}
+
+
+.error-msg p {
+    padding: 10px 0;
+    border-bottom: solid 1px #eeeeec;
+}
+.error-msg p:last-child {
+    border-bottom: none;
+}
+
+
+.body-container .auth {
+    margin-top: 100px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.body-container .auth .logo {
+    height: 100px;
+    width: 500px;
+    text-align: center;
+    margin-bottom: 10px;
+    display: table-cell;
+    vertical-align: middle;
+}
+.body-container .auth .logo img {
+    max-height: 100px;
+    max-width: 500px;;
+}
+.body-container .auth .title {
+    color: #fff;
+    margin-top: 40px;
+    font-size: 16px;
+    letter-spacing: 0;
+}
+.body-container .auth .input-group, .body-container .auth .input-group .input {
+    margin-top: 20px;
+}
+.body-container .auth .input-group input {
+    height: 37px !important;
+}
+.body-container .auth .input-group .input label {
+    color: #ffffff;
+    line-height: 40px;
+}
+.body-container .auth .input-group .input .checkcode:hover {
+    cursor: pointer;
+}
+.body-container .auth .input-group .input .checkcode {
+    width: 25%;
+    height: 38px;
+    float: right;
+    color: #000;
+    text-align: center;
+    line-height: 38px;
+    background-color: #ffffff;
+    border: solid 1px #0d6fd1;
+}
+.body-container .auth .action {
+    margin-top: 30px;
+}
+.body-container .auth .action .action-button button, .body-container .auth .action .action-link {
+    height: 40px;
+    color: #ffff;
+    line-height: 40px;
+}
+.body-container .auth .action .action-button button {
+    width: 100%;
+    font-size: 14px;
+    line-height: 40px;
+    letter-spacing: 0;
+    border-radius: 30px;
+    border-color: #23a9f6;
+    background-color: #23a9f6;
+}
+.body-container .auth .action .action-button button:hover {
+    cursor: pointer;
+}
+.body-container .auth .action .action-link {
+    text-align: center;
+}
+.body-container .auth .action .action-link a {
+    color: #ffff;
+    font-size: 12px;
+    font-weight: 400;
+    margin: 1px 15px;
+}
+.body-container .auth .describe {
+    color: #fff;
+    padding-top: 15px;
+    text-align: center;
+    letter-spacing: 0.05em;
+    border-top: solid 1px #d7d7d7;
+}
+.body-container .auth .describe a {
+    color: #ffff;
+}
+.body-container .auth .describe a:hover {
+    border-bottom: dotted 1px #fff;
+}
+
+
+.head-container, .foot-container {
+    overflow: hidden;
+    background-color: #2B415A;
+    border-bottom: 1px solid #2B415A;
+}
+
+
+.head-container {
+    padding: 0 5px;
+}
+.head-container .head-logo {
+    padding-right: 44px;
+}
+.head-container .head-logo, .head-container .head-menu, .head-container .user-menu {
+    height: 48px;
+    line-height: 48px;
+}
+.head-container .head-logo, .head-container .head-logo a img{
+    width: 150px;
+}
+.head-container .head-menu ul li, .head-container .user-menu ul li{
+    float: left;
+    cursor: pointer;
+    text-align: center;
+}
+.head-container .head-menu ul li a, .head-container .user-menu ul li a{
+    width: 100px;
+    color: #ffff;
+    height: 48px;
+    font-size: 13px;
+    line-height: 48px;
+    display: inline-block;
+}
+.head-container .head-menu ul li a:hover, .head-container .user-menu ul li a:hover {
+    background-color: #233549;
+}
+
+
+.foot-container {
+    height: 36px;
+    padding: 0 10px;
+    line-height: 36px;
+}
+.foot-container ul li span {
+    color: #ffff;
+}
+
+
+.body-container .nav-menu {
+    color: #333333;
+    border-right:solid 1px #EEEEEE;
+}
+.body-container .nav-menu .menu-title {
+    height: 70px;
+    text-indent: 20px;
+    font-weight: bold;
+    line-height: 70px;
+    white-space: nowrap;
+    background-color: #d9dee4;
+}
+.body-container .nav-menu .menu-body a.menu-item {
+    margin: 0;
+    height: 40px;
+    display: block;
+    color: #333333;
+    line-height: 40px;
+}
+.body-container .nav-menu .menu-body a.menu-item.active {
+    background-color: #EBEDF4;
+}
+.body-container .nav-menu .menu-body a.menu-item .nav-icon {
+    width: 30px;
+    height: 40px;
+    float: left;
+    color: #333333;
+    text-align: center;
+}
+
+.body-container .nav-page .nav-page-container {
+    padding: 0 15px;
+}
+.body-container .nav-page .nav-page-container .page-title {
+    line-height: 70px;
+    font-weight: bolder;
+}
+.body-container .nav-page .nav-page-container .page-title span {
+    padding-left: 1em;
+    border-left: solid 2px #0099cc;
+}
+.body-container .nav-page .nav-page-container .page-notice {
+    color: #555555;
+    text-indent: 1em;
+    line-height: 40px;
+    vertical-align: middle;
+    box-sizing: border-box;
+    border: solid 1px #dddddd;
+    background-color: #f9f9f9;
+}
+.body-container .nav-page .nav-page-container .page-body fieldset {
+    border: none;
+}
+.body-container .nav-page .nav-page-container .page-body fieldset legend {
+    width: 100%;
+    line-height: 42px;
+    border-bottom: solid 1px #EEEEEE;
+}
+.body-container .nav-page .nav-page-container .page-body .form-group {
+    line-height: 42px;
+}
+.body-container .nav-page .nav-page-container .page-body .form-group .form-label {
+    color: #666666;
+    min-width: 100px;
+    text-align: right;
+    margin-right: 15px;
+}
+.body-container .nav-page .nav-page-container .page-foot {
+    margin: 20px 0;
+    line-height: 42px;
+    border-top: solid 1px #eeeeee;
+}
+
+
+.body-container .nav-page .nav-page-container .page-body .user-head {
+    padding: 10px 0;
+    border-top: dashed 1px #EEEEEE;
+    border-bottom: dashed 1px #EEEEEE;
+}
+.body-container .nav-page .nav-page-container .page-body .user-head .user-image {
+    text-align: center;
+}
+.body-container .nav-page .nav-page-container .page-body .user-head .user-image img {
+    width: 72px;
+}
+.body-container .nav-page .nav-page-container .page-body .user-head .user-info {
+    line-height: 72px;
+    padding-left: 20px;
+    font-size: 14px;
+}
+.body-container .nav-page .nav-page-container .page-body .user-detail {
+    padding-left:  30px;
+    border-left: dashed 1px #eeeeee;
+}
+.body-container .nav-page .nav-page-container .page-body .user-detail ul li {
+    line-height: 35px;
+}
+.body-container .nav-page .nav-page-container .page-body .user-sets {
+    padding: 10px 0;
+    border-bottom: dashed 1px #EEEEEE;
+}
+.body-container .nav-page .nav-page-container .page-body .user-sets .set-item-title, .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-body, .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-oper {
+    line-height: 25px;
+    padding: 20px 0 20px 10px;
+}
+.body-container .nav-page .nav-page-container .page-body .user-sets .set-item-body {
+    padding-left: 30px;
+}
+.body-container .nav-page .nav-page-container .page-body .user-sets .set-item-title {
+    width: 150px;
+    font-size: 13px;
+    border-right: dashed 1px #EEEEEE;
+}
+
+
+.avatar-modify .tabs-container .tabs-panels {
+    padding: 15px;
+    min-height: 220px;
+}
+.avatar-modify .img-select, .avatar-modify .img-preview, .avatar-modify .img-upload {
+    height: 110px;
+    margin-top: 15px;
+    border: solid 1px #EEEEEE;
+    background-color: #EEEEEE;
+}
+.avatar-modify .img-select {
+    width: 345px;
+    overflow-y: scroll;
+}
+.avatar-modify .img-select ul li {
+    float: left;
+    padding: 5px;
+    cursor: pointer;
+}
+.avatar-modify .img-select ul li img, .avatar-modify .img-preview img{
+    width: 100px;
+    height: 100px;
+}
+.avatar-modify .img-select ul li img:hover {
+    border-top: solid 2px #57a3f3;
+    box-sizing: border-box;
+}
+.avatar-modify .img-preview {
+    width: 200px;
+    text-align: center;
+}
+.avatar-modify .img-preview img {
+    margin-top: 5px;
+}
+.avatar-modify .operation {
+    margin-top: 20px;
+    padding-top: 20px;
+    text-align: right;
+    border-top: solid 1px #eeeeee;
+}
+.avatar-modify .img-upload span.textbox.filebox {
+    margin: 40px 10px;
+}
+
+
+.body-container .nav-page .nav-page-container .page-body .user-form {
+    padding: 15px 0 20px 0;
+}
+
+.body-container .nav-page .nav-page-container .page-body .step-tabs {
+    margin-top: 20px;
+}
+.body-container .nav-page .nav-page-container .page-body .step-tabs .tabs-panels {
+    padding: 30px 0;
+    min-height: 150px;
+}
+.body-container .nav-page .nav-page-container .page-body .step-tabs .tabs-panels .step-skip {
+    text-align: center;
+    line-height: 150px;
+}

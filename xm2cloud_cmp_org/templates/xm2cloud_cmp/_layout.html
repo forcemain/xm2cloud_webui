@@ -1,0 +1,107 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+{% endblock %}
+
+{% block head_container %}
+<div class="head-container">
+    <div class="lf">
+        <div class="lf logo">
+            <a href="#"><img src="{% static 'xm2cloud_cmp/../../../xm2cloud_cmp/static/xm2cloud_cmp/img/xm2cloud-header.png' %}" alt=""></a>
+        </div>
+        <div class="lf head-menu">
+            <ul>
+                <li class="dropdown-submenu">
+                    <a href="{% url 'xm2cloud_cmp:home'%}"><span>资源概览</span></a>
+                </li>
+                <li class="dropdown-submenu">
+                    <a href="{% url 'xm2cloud_cmp:clusters'%}"><span>集群列表</span></a>
+                </li>
+                <li class="dropdown-submenu">
+                    <a href="{% url 'xm2cloud_cmp:hostgroups'%}"><span>群组列表</span></a>
+                </li>
+                <li class="dropdown-submenu">
+                    <a href="{% url 'xm2cloud_cmp:hosts'%}"><span>主机列表</span></a>
+                </li>
+                <li class="dropdown-submenu" _target="script_task">
+                    <span>脚本任务 <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                    <div id="script_task" class="easyui-menu">
+                        <div><a href="#">脚本列表</a></div>
+                        <div><a href="#">执行脚本</a></div>
+                        <div><a href="#">执行记录</a></div>
+                        <div><a href="#">定时任务</a></div>
+                    </div>
+                </li>
+                <li class="dropdown-submenu" _target="sched_plan">
+                    <span>任务编排 <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                    <div id="sched_plan" class="easyui-menu">
+                        <div><a href="#">任务编排</a></div>
+                        <div><a href="#">执行记录</a></div>
+                    </div>
+                </li>
+                <li class="dropdown-submenu" _target="code_deploy">
+                    <span>代码部署 <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                    <div id="code_deploy" class="easyui-menu">
+                        <div><a href="#">仓库管理</a></div>
+                        <div><a href="#">应用管理</a></div>
+                        <div><a href="#">部署记录</a></div>
+                    </div>
+                </li>
+                <li class="dropdown-submenu" _target="monitor_alert">
+                    <span>监控告警 <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                    <div id="monitor_alert" class="easyui-menu">
+                        <div><a href="{% url 'xm2cloud_cmp:monitors' %}">监控概览</a></div>
+                        <div><a href="{% url 'xm2cloud_cmp:dashboard'%}">监控大盘</a></div>
+                        <div><a href="{% url 'xm2cloud_cmp:alertchecks'%}">告警策略</a></div>
+                        <div><a href="{% url 'xm2cloud_cmp:alertlogs'%}">日志查询</a></div>
+                        <div><a href="#">插件管理</a></div>
+                        <div><a href="{% url 'xm2cloud_cmp:reporttasks'%}">周期报表</a></div>
+                    </div>
+                </li>
+                <li class="dropdown-submenu" _target="glob_setting">
+                    <span>全局设置 <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                    <div id="glob_setting" class="easyui-menu">
+                        <div><a href="#">密码密钥</a></div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="rt">
+        <ul>
+            <li class="dropdown-submenu" _target="user_profile">
+                <span>{{ request.user.username }} <i class="fa fa-angle-down" aria-hidden="true"></i></span>
+                <div id="user_profile" class="easyui-menu">
+                    <div><a href="{% url 'xm2cloud_auth:profile'%}">基本资料</a></div>
+                    <div><a href="">访问控制</a></div>
+                    <div><a href="">API 接入</a></div>
+                    <div><a href="">操作日志</a></div>
+                    <div><a href="{% url 'xm2cloud_auth:logout'%}">退出系统</a></div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block foot_container %}
+<div class="copyright" >
+    <ul>
+        <li class="lf">
+            <span class="text-white">v1.2-20171219_120716_1309 &copy;2017 -
+                <script>
+                var curYear = new Date().getFullYear();
+                document.write(curYear.toString());
+                </script>
+                , XM2CLOUD. ALL Rights Reserved.
+            </span>
+        </li>
+        <li class="rt"><span class="text-white">技术支持: xmdevops@vip.qq.com</span></li>
+    </ul>
+</div>
+{% endblock %}
+
+
+

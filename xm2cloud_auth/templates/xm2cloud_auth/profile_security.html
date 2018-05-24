@@ -1,0 +1,259 @@
+{% load static %}
+{% load security %}
+
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>安全设置</span>
+    </div>
+    <div class="page-body">
+        <div class="user-head">
+            <div class="user-image lf">
+                <p>
+                    <a href="{{ request.user.profile.photo }}" target="_blank" title="{{ request.user.username|capfirst }}">
+                        {% if request.user.profile.thumbs %}
+                            <img src="{{ request.user.profile.thumbs }}" alt="XM2CLOUD-USER">
+                        {% else %}
+                            <img src="{% static 'xm2cloud_auth/img/avatars/default.png' %}" alt="XM2CLOUD-USER">
+                        {% endif %}
+                    </a>
+                </p>
+                <p><a id="modify_avatar" href="#" class="link-underline">修改头像</a></p>
+            </div>
+            <div class="user-info lf">
+                您好, {{ request.user.username|capfirst }}. 欢迎回来 !
+            </div>
+            <div class="user-detail rt">
+                <ul>
+                    <li>登陆账号: {{ request.user.username|capfirst }}</li>
+                    <li>账户编号: {{ request.user.pk }}</li>
+                    <li>注册时间: {{ request.user.date_joined|date:"Y-m-d H:i:s" }}</li>
+                </ul>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div class="user-sets">
+            <ul>
+                <li>
+                    <div class="lf set-item-title">
+                        <i class="fa fa-check-circle font-green"> 登陆密码</i>
+                    </div>
+                    <div class="lf set-item-body">
+                        安全性高的密码可以使账户更安全, 建议您定期更换密码.
+                    </div>
+                    <div class="rt set-item-oper">
+                        <a name="password_change" href="#" class="control-href link-underline"><span class="font-link">修改</span></a>
+                    </div>
+                    <div class="clear"></div>
+                </li>
+                <li>
+                    <div class="lf set-item-title">
+                        {% if request.user.profile.mfa_protect_is_enable %}
+                            <i class="fa fa fa-check-circle font-green"> MFA验证</i>
+                        {% else %}
+                            <i class="fa fa-warning font-yellow"> MFA验证</i>
+                        {% endif %}
+                    </div>
+                    <div class="lf set-item-body">
+                        您可以通过绑定多因素认证设备MFA, 对登录者进行二次验证.
+                    </div>
+                    <div class="rt set-item-oper">
+                        <a name="mfa_change" href="#" class="control-href link-underline"><span class="font-link">修改</span></a>
+                    </div>
+                    <div class="clear"></div>
+                </li>
+                <li>
+                    <div class="lf set-item-title">
+                        {% if request.user.profile.phone %}
+                            <i class="fa fa-check-circle font-green"> 手机绑定</i>
+                        {% else %}
+                            <i class="fa fa-warning font-yellow"> 手机绑定</i>
+                        {% endif %}
+                    </div>
+                    <div class="lf set-item-body">
+                        {% if request.user.profile.phone %}
+                            您已绑定手机<span class="font-green">{{ request.user.profile.phone|hide_phone }}</span>,
+                        {% else %}
+                            您未绑定手机,
+                        {% endif %}
+                        您的安全手机, 可以找回密码, 但不能用于登录.
+                    </div>
+                    <div class="rt set-item-oper">
+                        <a name="phone_change" href="#" class="control-href link-underline"><span class="font-link">修改</span></a>
+                    </div>
+                    <div class="clear"></div>
+                </li>
+                <li>
+                    <div class="lf set-item-title">
+                        {% if request.user.email %}
+                            <i class="fa fa-check-circle font-green"> 密保邮箱</i>
+                        {% else %}
+                            <i class="fa fa-warning font-yellow"> 密保邮箱</i>
+                        {% endif %}
+                    </div>
+                    <div class="lf set-item-body">
+                        {% if request.user.email %}
+                            您已绑定邮箱<span class="font-green">{{ request.user.email|hide_email }}</span>,
+                        {% else %}
+                            您未绑定邮箱,
+                        {% endif %}
+                        您的安全邮箱, 可以找回密码, 但不能用于登录.
+                    </div>
+                    <div class="rt set-item-oper">
+                        <a name="email_change" href="#" class="control-href link-underline"><span class="font-link">修改</span></a>
+                    </div>
+                    <div class="clear"></div>
+                </li>
+                <li>
+                    <div class="lf set-item-title">
+                        {% if request.user.profile.operate_protect_method and request.user.profile.operate_protect_intensity %}
+                            <i class="fa fa-check-circle font-green"> 操作保护</i>
+                        {% else %}
+                            <i class="fa fa-warning font-yellow"> 操作保护</i>
+                        {% endif %}
+                    </div>
+                    <div class="lf set-item-body">
+                        在进行敏感操作时,通过设置保护强度和验证方式再次确认您的身份,进一步提高账号安全性.
+                    </div>
+                    <div class="rt set-item-oper">
+                        <a name="protect_change" href="#" class="control-href link-underline"><span class="font-link">修改</span></a>
+                    </div>
+                    <div class="clear"></div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div id="avatar_modify" title="修改头像" class="easyui-window avatar-modify" collapsible="false" minimizable="false" maximizable="false" closed="true" width="600">
+    <div class="easyui-tabs" border="false">
+        <div title="个性头像编辑">
+            <p>
+                从个性头像库里选择一张图片作为头像.
+            </p>
+            <div class="lf img-select">
+                <ul>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_01.jpg' %}" alt="XM2CLOUD-USER"></li>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_02.jpg' %}" alt="XM2CLOUD-USER"></li>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_03.jpg' %}" alt="XM2CLOUD-USER"></li>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_04.jpg' %}" alt="XM2CLOUD-USER"></li>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_05.jpg' %}" alt="XM2CLOUD-USER"></li>
+                    <li><img src="{% static 'xm2cloud_auth/img/avatars/user_06.jpg' %}" alt="XM2CLOUD-USER"></li>
+                </ul>
+            </div>
+            <div class="rt img-preview">
+                <img id="avatar_preview" src="{% static 'xm2cloud_auth/img/avatars/default.png' %}" alt="XM2CLOUD-USER">
+            </div>
+            <div class="clear"></div>
+            <div class="operation">
+                <a href="#" class="upload_cancel easyui-linkbutton button-white no-border-radius">取消</a>
+                <a id="setting_avatar" href="#" class="easyui-linkbutton button-white no-border-radius">确认</a>
+            </div>
+        </div>
+        <div title="本地头像上传">
+            <p>
+                从电脑里挑选一张好图作为头像吧
+            </p>
+            <div class="img-upload">
+                <input id="avatar_upload" name="avatar" class="easyui-filebox" buttonText="选择文件" buttonAlign="right" accept=".jpg,.png" style="width: 90%;">
+            </div>
+            <div class="clear"></div>
+            <div class="operation">
+                <a href="#" class="upload_cancel easyui-linkbutton button-white no-border-radius">取消</a>
+                <a id="upload_avatar" href="#" class="easyui-linkbutton button-white no-border-radius">上传</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,user_profile_id = "{{ request.user.profile.pk }}"
+        ,mfa_change_href = "{% url 'xm2cloud_auth:mfa_change' %}"
+        ,phone_change_href = "{% url 'xm2cloud_auth:phone_change' %}"
+        ,email_change_href = "{% url 'xm2cloud_auth:email_change' %}"
+        ,password_change_href = "{% url 'xm2cloud_auth:password_change' %}"
+        ,protect_change_href = "{% url 'xm2cloud_auth:protection_change' %}"
+        ,profile_update_api = "{% url 'xm2cloud_auth:api_profile_update' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    var _html;
+    var _load;
+    $(function () {
+        $('.control-href').on('click', function () {
+            var name = $(this).attr('name')
+                ,options = {};
+            switch (name){
+                case 'password_change':
+                    options.href = password_change_href;
+                    break;
+                case 'mfa_change':
+                    options.href = mfa_change_href;
+                    break;
+                case 'phone_change':
+                    options.href = phone_change_href;
+                    break;
+                case 'email_change':
+                    options.href = email_change_href;
+                    break;
+                case 'protect_change':
+                    options.href = protect_change_href;
+                    break
+            }
+            $._control('#control', options);
+        });
+        $('#modify_avatar').on('click', function () {$('#avatar_modify').window('open')});
+        $('.img-select img').on('click', function () {$('#avatar_preview').attr('src', $(this).attr('src'))});
+        $('.upload_cancel').on('click', function () {$('#avatar_modify').window('close')});
+        $('#setting_avatar').on('click', function () {
+            var that = this
+                ,thumbs = $('#avatar_preview').attr('src');
+
+            if(!_html) _html = $(that).find('span:last').html();
+            _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+            $(that).find('span:last').html(_load);
+
+            var profile_update_url = profile_update_api.replace('/0/', '/'+user_profile_id+'/');
+            $._ajax({
+                url: profile_update_url,
+                error_width: 501,
+                success: function (data) {
+                    console.log(location.href+':'+data);
+                    // location.href = data.next;
+                    $('#control').panel('refresh');
+                },
+                complete: function () {
+                    $(that).find('span:last').html(_html);
+                },
+                data: {thumbs: thumbs}
+            })
+        });
+        $('#upload_avatar').on('click', function () {
+            var that = this
+                ,form = new FormData()
+                ,file = $('#avatar_upload').next('span').find('input')[1].files[0];
+            form.append('avatar', file);
+            form.append('csrfmiddlewaretoken', ajax_csrf_token);
+
+            if(!_html) _html = $(that).find('span:last').html();
+            _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+            $(that).find('span:last').html(_load);
+
+            var profile_update_url = profile_update_api.replace('/0/', '/'+user_profile_id+'/');
+            $._ajax({
+                url: profile_update_url,
+                error_width: 501,
+                processData: false,
+                contentType:false,
+                success: function (data) {
+                    console.log(location.href+':'+data);
+                    // location.href = data.next;
+                    $('#control').panel('refresh');
+                },
+                complete: function () {
+                    $(that).find('span:last').html(_html);
+                },
+                data: form
+            })
+        })
+    });
+</script>

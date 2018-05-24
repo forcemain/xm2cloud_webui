@@ -1,0 +1,93 @@
+{% load static %}
+
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>MFA验证</span>
+    </div>
+    <div class="page-notice">
+        请在智能设备上安装MFA应用程序
+        <a href="#" class="link-underline">Google Authenticator</a>. 查看
+        <a href="#" class="link-underline">MFA使用指导</a>
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>安全绑定</legend>
+            <div class="form-group">
+                <div class="lf form-label">随机密钥 : </div>
+                <div class="lf form-input">
+                    <span id="mfa_secret_key">{{ secret_key }}</span>
+                    <a href="#" class="link-underline">复制</a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">扫码绑定 : </div>
+                <div class="form-input">
+                    <canvas id="mfa_gotp_qurls"></canvas>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="profile_update" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_auth/js/qrious.min.js' %}"></script>
+<script type="text/javascript">
+    var mfa_protect_is_enable = 1
+        ,mfa_gotp_qurls = "{{ gotp_qurls }}"
+        ,mfa_secret_key = "{{ secret_key }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,user_profile_id = "{{ request.user.profile.pk }}"
+        ,security_href = "{% url 'xm2cloud_auth:profile_security'%}"
+        ,profile_update_api = "{% url 'xm2cloud_auth:api_profile_update' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+    $(function () {
+        new QRious({
+            size: 165,
+            padding: 0,
+            value: mfa_gotp_qurls,
+            element: document.getElementById('mfa_gotp_qurls')
+        });
+
+        $('#profile_update').linkbutton({
+            onClick: function () {
+                var _html
+                    ,_load
+                    ,that = this;
+
+                if(!_html) _html = $(that).find('span:last').html();
+                _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+                $(that).find('span:last').html(_load);
+                var profile_update_url = profile_update_api.replace('/0/', '/'+user_profile_id+'/');
+                $._ajax({
+                    url: profile_update_url,
+                    error_width: 501,
+                    beforeSend: function () {
+                        $(that).find('span:last').html(_load);
+                    },
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: security_href});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        mfa_secret_key: mfa_secret_key,
+                        mfa_gotp_qurls: mfa_gotp_qurls,
+                        mfa_protect_is_enable: mfa_protect_is_enable
+                    }
+                })
+
+            }
+        })
+    });
+</script>

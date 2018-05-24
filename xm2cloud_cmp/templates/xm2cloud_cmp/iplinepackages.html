@@ -1,0 +1,116 @@
+{% load static %}
+
+<table id="iplinepackage_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,iplinepackage_list = "{% url 'xm2cloud_cmp:iplinepackages' %}"
+        ,iplinepackage_create = "{% url 'xm2cloud_cmp:iplinepackage_create' %}"
+        ,iplinepackage_list_api = "{% url 'xm2cloud_cmp:api_iplinepackage_list' %}"
+        ,iplinepackage_update = "{% url 'xm2cloud_cmp:iplinepackage_update' id=0 %}"
+        ,iplinepackage_delete = "{% url 'xm2cloud_cmp:iplinepackage_delete' id=0 %}"
+        ,iplinepackage_detail = "{% url 'xm2cloud_cmp:iplinepackage_detail' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['iplinepackageSearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click').bind('click', function () {
+            var that = this
+                ,name = $(that).attr('name');
+
+            var options = {}
+                ,selected = $('#iplinepackage_datagrid').datagrid('getSelected');
+            switch (name){
+                case 'add':
+                    options.href = iplinepackage_create;
+                    break;
+                case 'edit':
+                    if(!selected){
+                        options.href = iplinepackage_list;
+                        break;
+                    }
+                    options.href = iplinepackage_update.replace('/0/', '/'+selected.id+'/');
+                    break;
+                case 'del':
+                    if(!selected){
+                        options.href = iplinepackage_list;
+                        break;
+                    }
+                    options.href = iplinepackage_delete.replace('/0/', '/'+selected.id+'/');
+                    break;
+            }
+            $._control('#control', options);
+        });
+        $._datagrid('#iplinepackage_datagrid', {
+            url: iplinepackage_list_api,
+            onLoadSuccess: function (data) {
+                var row_num = $(this).datagrid('getRows').length;
+                for(var i=0; i<row_num; i++){
+                    var mbutton_id = 'mb_iplinepackage_'+i;
+                    $('#'+mbutton_id).menubutton({menu: '#mt_iplinepackage_'+i});
+                }
+
+                $('.iplinepackage-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'name',width:'20%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = iplinepackage_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="iplinepackage-detail link-underline">'+value+'</a>'
+                    }
+                },
+                {
+                    field:'monitor',width:'5%',title:'监控',align:'center',
+                    formatter: function(value, row, index){
+                        return '<i class="fa fa-line-chart font-green"></i>'
+                    }
+                },
+                {
+                    field:'iplines',width:'10%',title:'已加入IP',align:'center',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = host_manage+'?iplinepackageId='+row.id+'&navName=ipline';
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+row.iplines+'</a>';
+                    }
+                },
+                {
+                    field:'band',width:'5%',title:'带宽',align:'center',sortable:true,
+                    formatter: function(value, row, index){
+                        return value+'M';
+                    }
+                },
+                {
+                    field:'line',width:'5%',title:'线路',align:'center',sortable:true,
+                },
+                {
+                    field:'package_state',width:'6%',title:'状态',align:'center',
+                    formatter: function(value, row, index){
+                        if(row.iplines>0){
+                            return '<a class="font-green">使用中</a>';
+                        }
+                        return '<a class="font-red">未绑定</a>';
+                    }
+                },
+                {
+                    field:'update_time',width:'15%',title:'上次修改',sortable:true,
+                },
+                {
+                    field:'notes',width:'20%', title:'备注'
+                }
+            ]]
+        })
+    })
+</script>

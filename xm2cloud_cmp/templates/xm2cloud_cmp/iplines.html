@@ -1,0 +1,145 @@
+{% load static %}
+
+<table id="ipline_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,ipline_list = "{% url 'xm2cloud_cmp:iplines' %}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,ipline_create = "{% url 'xm2cloud_cmp:ipline_create' %}"
+        ,ipline_list_api = "{% url 'xm2cloud_cmp:api_ipline_list' %}"
+        ,ipline_update = "{% url 'xm2cloud_cmp:ipline_update' id=0 %}"
+        ,ipline_delete = "{% url 'xm2cloud_cmp:ipline_delete' id=0 %}"
+        ,ipline_detail = "{% url 'xm2cloud_cmp:ipline_detail' id=0 %}"
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['iplineSearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click').bind('click', function () {
+            var that = this
+                ,name = $(that).attr('name');
+
+            var options = {}
+                ,selected = $('#ipline_datagrid').datagrid('getSelected');
+            switch (name){
+                case 'add':
+                    options.href = ipline_create;
+                    break;
+                case 'edit':
+                    if(!selected){
+                        options.href = ipline_list;
+                        break;
+                    }
+                    options.href = ipline_update.replace('/0/', '/'+selected.id+'/');
+                    break;
+                case 'del':
+                    if(!selected){
+                        options.href = ipline_list;
+                        break;
+                    }
+                    options.href = ipline_delete.replace('/0/', '/'+selected.id+'/');
+                    break;
+            }
+            $._control('#control', options);
+        });
+        $._datagrid('#ipline_datagrid', {
+            url: ipline_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_ipline_'+item.id;
+                    var mt_id = '#mt_ipline_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'unbind_host':
+                                alert('解除绑定: '+item.id);
+                                break;
+                            case 'unbind_package':
+                                alert('移除共享: '+item.id);
+                                break;
+                        }
+                    });
+                });
+
+                $('.ipline-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                });
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'ip',width:'10%',title:'地址',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = ipline_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="ipline-detail link-underline">'+value+'</a>'
+                    }
+                },
+                {
+                    field:'line',width:'5%',title:'线路'
+                },
+                {
+                    field:'bind',width:'15%',title:'绑定资源',sortable:true,
+                    formatter: function(value, row, index){
+                        if(row.host_id && row.host_name) {
+                            var _t = host_manage+'?iplineId='+row.id+'&navName=host';
+                            return '<a target="_blank" href="'+ _t +'" class="host-detail link-underline">' + row.host_name + '</a>'
+                        }
+                        return 'N/A';
+                    }
+                },
+                {
+                    field:'band',width:'5%',title:'带宽',align:'center',
+                    formatter: function(value, row, index){
+                        if(row.package_band){
+                            return row.package_band+'M';
+                        }
+                        return value+'M';
+                    }
+                },
+                {
+                    field:'package_band',width:'20%',title:'共享带宽',align:'center',
+                    formatter: function(value, row, index){
+                        if(row.package_id && row.package_name){
+                            var _t = host_manage+'?iplineId='+row.id+'&navName=iplinepackage';
+                            return '<a target="_blank" href="'+_t+'" class="ipline-package-detail link-underline">'+row.package_name+'</a>';
+                        }
+                        return 'N/A';
+                    }
+                },
+                {
+                    field:'ip_state',width:'5%',title:'状态',align:'center',
+                    formatter: function(value, row, index){
+                        if(row.host_id && row.host_name){
+                            return '<a class="font-green">使用中</a>';
+                        }
+                        return '<a class="font-red">未绑定</a>';
+                    }
+                },
+                {
+                    field:'notes',width:'16%',title:'备注'
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_ipline_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_ipline_'+row.id+'" style="display: none;">'
+                                  + '<div _t="unbind_host" class="menu-more">解除绑定</div>'
+                                  + '<div _t="unbind_package" class="menu-more">移出共享</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

@@ -1,0 +1,72 @@
+{% load static %}
+
+<div class="head-container">
+    <div class="head-logo lf">
+        <a href="{% url 'xm2cloud_web:index' %}">
+            <img src="{% static 'xm2cloud_web/img/xm2cloud-header.png' %}" alt="XM2CLOUD">
+        </a>
+    </div>
+    <div class="head-menu lf">
+        <div class="nav-up">
+            <ul class="lf">
+                <li _t="index"><a href="#">首页</a></li>
+                <li _t="product"><a href="#">产品</a></li>
+                <li _t="blog"><a href="#">博客</a></li>
+                <li _t="more"><a href="#">更多</a></li>
+            </ul>
+        </div>
+        <div class="nav-down">
+            <div id="product" class="nav-down-menu hide" _t="product">
+                <div class="nav-down-inner">
+                    <dl>
+                        <dd><a href="#">配置管理</a></dd>
+                    </dl>
+                    <dl>
+                        <dd><a href="#">工单系统</a></dd>
+                    </dl>
+                </div>
+            </div>
+            <div id="more" class="nav-down-menu hide" _t="more">
+                <div class="nav-down-inner">
+                    <dl>
+                        <dd><a href="#">关于我们</a></dd>
+                    </dl>
+                    <dl>
+                        <dd><a href="#">加入我们</a></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="head-entrance rt">
+        <div class="nav-up">
+            <ul class="lf">
+                <li class="active"><a class="active" href="{% url 'xm2cloud_cmp:home' %}">控制台</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="clear"></div>
+</div>
+
+{% block scripts %}
+    <script type="text/javascript">
+        $(function(){
+            var timers={};
+            $('[_t]').hover(function(){
+                var _nav = $(this).attr('_t');
+                var _timer_name = _nav+'_timer';
+                clearTimeout(timers[_timer_name]);
+                timers[_timer_name] = setTimeout(function(){
+                    $('#'+_nav).stop(true,true).slideDown(200);
+                }, 150);
+            },function(){
+                var _nav = $(this).attr('_t');
+                var _timer_name = _nav+'_timer';
+                clearTimeout(timers[_timer_name] );
+                timers[_timer_name] = setTimeout(function(){
+                    $('#'+_nav).stop(true,true).slideUp(200);
+                }, 150);
+            });
+        });
+    </script>
+{% endblock %}

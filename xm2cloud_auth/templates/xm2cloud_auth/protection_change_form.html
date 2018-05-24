@@ -1,0 +1,124 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>操作保护</span>
+    </div>
+    <div class="page-notice">
+        当前设置仅对修改密码等通用功能生效, 其它云产品会陆续支持, 敬请期待!
+    </div>
+    <div class="page-body">
+        <div class="user-form">
+            <div class="form-group">
+                <div class="lf form-label"><span class="font-red">*</span> 保护强度 : </div>
+                <div class="lf form-input">
+                    <input type="radio" class="easyui-radiobox" name="operate_protect_intensity" value="force"
+                            {% if request.user.profile.operate_protect_intensity == 'force' %} checked {% endif %}>
+                    <label for="operate_protect_method">强制二次验证 </label>
+                    <input type="radio" class="easyui-radiobox" name="operate_protect_intensity" value="default"
+                            {% if request.user.profile.operate_protect_intensity == 'default' %} checked {% endif %}>
+                    <label for="operate_protect_method">
+                        系统默认策略 <a href="#" title="通过系统判断是否需要二次验证" class="easyui-tooltip" position="right"><i class="fa fa-question-circle-o"></i></a>
+                    </label>
+                </div>
+                <div class="clear"></div>
+            </div>
+            <div class="form-group">
+                <div class="lf form-label"><span class="font-red">*</span> 验证方式 : </div>
+                <div class="lf form-input">
+                    {% if not request.user.profile.phone %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="phone" disabled>
+                        <label for="operate_protect_method">手机 <a href="#" title="手机未绑定, 无法验证" class="easyui-tooltip link-underline">未绑定</a> </label>
+                    {% else %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="phone" disabled>
+                        <label for="operate_protect_method">手机 </label>
+                    {% endif %}
+                    {% if not request.user.email %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="email" disabled
+                                {% if request.user.profile.operate_protect_method == 'email' %} checked {% endif %}>
+                        <label for="operate_protect_method">邮箱 <a href="#" title="邮箱未绑定, 无法验证" class="easyui-tooltip link-underline">未绑定</a> </label>
+                    {% else %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="email"
+                                {% if request.user.profile.operate_protect_method == 'email' %} checked {% endif %}>
+                        <label for="operate_protect_method">邮箱 </label>
+                    {% endif %}
+                    {% if not request.user.profile.mfa_protect_is_enable  %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="mfa" disabled
+                                {% if request.user.profile.operate_protect_method == 'mfa' %} checked {% endif %}>
+                        <label for="operate_protect_method">MFA <a href="#" title="MFA未开启, 无法验证" class="easyui-tooltip link-underline">未启用</a> </label>
+                    {% else %}
+                        <input type="radio" class="easyui-radiobox" name="operate_protect_method" value="mfa"
+                                {% if request.user.profile.operate_protect_method == 'mfa' %} checked {% endif %}>
+                        <label for="operate_protect_method">MFA </label>
+                    {% endif %}
+                </div>
+                <div class="clear"></div>
+            </div>
+        </div>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="profile_update" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,user_profile_id = "{{ request.user.profile.pk }}"
+        ,mfa_change_href = "{% url 'xm2cloud_auth:mfa_change' %}"
+        ,security_href = "{% url 'xm2cloud_auth:profile_security'%}"
+        ,phone_change_href = "{% url 'xm2cloud_auth:phone_change' %}"
+        ,email_change_href = "{% url 'xm2cloud_auth:email_change' %}"
+        ,profile_update_api = "{% url 'xm2cloud_auth:api_profile_update' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    var _html;
+    var _load;
+    $(function () {
+        $('input[name="operate_protect_method"]').next('label').find('a').on('click', function () {
+            var value = $(this).parent('label').prev('input').val()
+                ,options = {};
+            switch (value){
+                case 'phone':
+                    options.href = phone_change_href;
+                    break;
+                case 'email':
+                    options.href = email_change_href;
+                    break;
+                case 'mfa':
+                    options.href = mfa_change_href;
+                    break
+            }
+            $._control('#control', options);
+        });
+        $('#profile_update').on('click', function () {
+            var that = this
+                ,$method = $('input[name="operate_protect_method"]:checked')
+                ,$intensity = $('input[name="operate_protect_intensity"]:checked');
+            if($method.attr('disabled')){$method.next('label').find('a').mouseover();return false}
+
+            var method = $method.val()
+                ,intensity = $intensity.val();
+
+            if(!_html) _html = $(that).find('span:last').html();
+            _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+            $(that).find('span:last').html(_load);
+
+            var profile_update_url = profile_update_api.replace('/0/', '/'+user_profile_id+'/');
+            $._ajax({
+                url: profile_update_url,
+                error_width: 501,
+                success: function (data) {
+                    console.log(location.href+':'+data);
+                    // location.href = data.next;
+                    $._control('#control', {href: security_href});
+                },
+                complete: function () {
+                    $(that).find('span:last').html(_html);
+                },
+                data: {operate_protect_method: method, operate_protect_intensity: intensity}
+            })
+        });
+    });
+</script>

@@ -1,0 +1,83 @@
+{% load static %}
+
+<div class="head-container">
+    <div class="head-logo lf">
+        <a href="{% url 'xm2cloud_web:index' %}">
+            <img src="{% static 'xm2cloud_web/img/xm2cloud-header.png' %}" alt="XM2CLOUD">
+        </a>
+    </div>
+    <div class="head-menu lf">
+        <ul>
+            <li class="dropdown-menu">
+                <a href="#">资源概览</a>
+            </li>
+            <li class="dropdown-menu">
+                <a href="{% url 'xm2cloud_cmp:cluster_manage'%}">集群管理</a>
+            </li>
+            <li class="dropdown-menu">
+                <a href="{% url 'xm2cloud_cmp:hostgroup_manage'%}">群组管理</a>
+            </li>
+            <li class="dropdown-menu">
+                <a href="{% url 'xm2cloud_cmp:host_manage'%}">主机管理</a>
+            </li>
+            <li class="dropdown-menu" _t="script_task">
+                <a href="#">脚本任务 <i class="fa fa-angle-down"></i></a>
+                <div id="script_task" class="easyui-menu">
+                    <div><a href="#">脚本列表</a></div>
+                    <div><a href="#">执行脚本</a></div>
+                    <div><a href="#">执行记录</a></div>
+                    <div><a href="#">定时任务</a></div>
+                </div>
+            </li>
+            <li class="dropdown-menu" _t="sched_plan">
+                <a href="#">任务编排 <i class="fa fa-angle-down"></i></a>
+                <div id="sched_plan" class="easyui-menu">
+                    <div><a href="#">任务编排</a></div>
+                    <div><a href="#">执行记录</a></div>
+                </div>
+            </li>
+            <li class="dropdown-menu" _t="code_deploy">
+                <a href="#">代码部署 <i class="fa fa-angle-down"></i></a>
+                <div id="code_deploy" class="easyui-menu">
+                    <div><a href="#">仓库管理</a></div>
+                    <div><a href="#">应用管理</a></div>
+                    <div><a href="#">部署记录</a></div>
+                </div>
+            </li>
+            <li class="dropdown-menu" _t="monitor_alert">
+                <a href="#">监控告警 <i class="fa fa-angle-down"></i></a>
+                <div id="monitor_alert" class="easyui-menu">
+                    <div><a href="#">监控大盘</a></div>
+                    <div><a href="#">告警策略</a></div>
+                    <div><a href="#">周期报表</a></div>
+                </div>
+            </li>
+        </ul>
+    </div>
+    <div class="user-menu rt">
+        <ul>
+            <li class="dropdown-menu" _t="work_list">
+                <a href="#">工单 <i class="fa fa-angle-down"></i></a>
+                <div id="work_list" class="easyui-menu">
+                    <div><a href="#">我的工单</a></div>
+                    <div><a href="#">提交工单</a></div>
+                </div>
+            </li>
+            <li class="dropdown-menu" _t="language">
+                <a href="#">简体中文 <i class="fa fa-angle-down"></i></a>
+                <div id="language" class="easyui-menu">
+                    <div><a href="#">English</a></div>
+                </div>
+            </li>
+            <li class="dropdown-menu" _t="user_profile">
+                <a>{{ request.user.username }} <i class="fa fa-angle-down"></i></a>
+                <div id="user_profile" class="easyui-menu">
+                    <div><a href="{% url 'xm2cloud_auth:profile'%}">账户管理</a></div>
+                    <div><a href="">访问控制</a></div>
+                    <div><a href="">API 接入</a></div>
+                    <div><a href="{% url 'xm2cloud_auth:logout'%}">退出系统</a></div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>

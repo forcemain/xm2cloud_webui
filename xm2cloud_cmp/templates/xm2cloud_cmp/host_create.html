@@ -1,0 +1,333 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认新增 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">
+                    <input id="name" name="name" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes" name="notes" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">核心 : </div>
+                <div class="lf form-input">
+                    <input id="vmcpu" name="vmcpu" class="easyui-textbox" value="4" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">内存 : </div>
+                <div class="lf form-input">
+                    <input id="vmmem" name="vmmem" class="easyui-textbox" value="4" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联系统 : </div>
+                <div class="lf form-input">
+                    <select id="vmos" name="vmos" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        {% for vmos in vmoses %}
+                            <option value="{{ vmos.pk }}">{{ vmos.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联区域 : </div>
+                <div class="lf form-input">
+                    <select id="area" name="area" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        {% for area in areas %}
+                            <option value="{{ area.pk }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联厂商 : </div>
+                <div class="lf form-input">
+                    <select id="firm" name="firm" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        {% for firm in firms %}
+                            <option value="{{ firm.pk }}">{{ firm.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联OEM : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="oem_left_search" name="oem_left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="oem_left_select" class="left-select" multiple="multiple">
+                            {% for oem in oems %}
+                                <option value="{{ oem.pk }}">{{ oem.oemid }}::{{ oem.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="oem_l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="oem_r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="oem_right_search" name="oem_right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="oem_right_select" class="right-select" multiple="multiple"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联地址 : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="ipline_left_search" name="ipline_left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="ipline_left_select" class="left-select" multiple="multiple">
+                            {% for ipline in iplines %}
+                                <option value="{{ ipline.pk }}">{{ ipline.line }}::{{ ipline.ip }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="ipline_l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="ipline_r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="ipline_right_search" name="ipline_right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="ipline_right_select" class="right-select" multiple="multiple"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联群组 : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="hostgroup_left_search" name="hostgroup_left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="hostgroup_left_select" class="left-select" multiple="multiple">
+                            {% for hostgroup in hostgroups %}
+                                <option value="{{ hostgroup.pk }}">{{ hostgroup.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="hostgroup_l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="hostgroup_r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="hostgroup_right_search" name="hostgroup_right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="hostgroup_right_select" class="right-select" multiple="multiple"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_host" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="create_host" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_list = "{% url 'xm2cloud_cmp:hosts' %}"
+        ,host_create_api = "{% url 'xm2cloud_cmp:api_host_create'%}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#oem_l2r').linkbutton({
+            onClick: function () {
+                $('#oem_left_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#oem_right_select'));
+                    }
+                })
+            }
+        });
+        $('#oem_r2l').linkbutton({
+            onClick: function () {
+                $('#oem_right_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#oem_left_select'));
+                    }
+                })
+            }
+        });
+        $('#oem_left_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#oem_left_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#oem_right_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#oem_right_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#ipline_l2r').linkbutton({
+            onClick: function () {
+                $('#ipline_left_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#ipline_right_select'));
+                    }
+                })
+            }
+        });
+        $('#ipline_r2l').linkbutton({
+            onClick: function () {
+                $('#ipline_right_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#ipline_left_select'));
+                    }
+                })
+            }
+        });
+        $('#ipline_left_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#ipline_left_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#ipline_right_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#ipline_right_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#hostgroup_l2r').linkbutton({
+            onClick: function () {
+                $('#hostgroup_left_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#hostgroup_right_select'));
+                    }
+                })
+            }
+        });
+        $('#hostgroup_r2l').linkbutton({
+            onClick: function () {
+                $('#hostgroup_right_select>option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo($('#hostgroup_left_select'));
+                    }
+                })
+            }
+        });
+        $('#hostgroup_left_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#hostgroup_left_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#hostgroup_right_search').textbox({
+            onChange: function (newValue, oldValue) {
+                $('#hostgroup_right_select>option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#create_host').linkbutton({
+            onClick: function () {
+                var that = this
+                    ,name = $('#name').textbox('getValue')
+                    ,vmos = $('#vmos').combobox('getValue')
+                    ,area = $('#area').combobox('getValue')
+                    ,firm = $('#firm').combobox('getValue')
+                    ,notes = $('#notes').textbox('getValue')
+                    ,vmcpu = $('#vmcpu').textbox('getValue')
+                    ,vmmem = $('#vmmem').textbox('getValue')
+                    ,oems = $('#oem_right_select').find('option').map(function(){return $(this).val()}).get()
+                    ,ipline_set = $('#ipline_right_select').find('option').map(function(){return $(this).val()}).get()
+                    ,hostgroups = $('#hostgroup_right_select').find('option').map(function(){return $(this).val()}).get();
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                $._ajax({
+                    url: host_create_api,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: host_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        name: name, vmos: vmos, area: area, firm: firm, notes: notes, vmcpu: vmcpu, vmmem: vmmem,
+                        oems: oems, ipline_set: ipline_set, hostgroups: hostgroups
+                    }
+                })
+            }
+        });
+        $('#goback_host').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: host_list});
+            }
+        });
+    })
+</script>

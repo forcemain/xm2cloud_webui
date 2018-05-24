@@ -1,0 +1,113 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认删除 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">{{ object.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">系统 : </div>
+                <div class="lf form-input">{{ object.vmos.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">配置 : </div>
+                <div class="lf form-input">{{ object.vmcpu }}核 {{ object.vmmem }}G</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">区域 : </div>
+                <div class="lf form-input">{{ object.firm.name }} {{ object.area.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">{{ object.notes }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联OEM : </div>
+                <div class="lf form-input">
+                    <a href="#" class="link-underline">{{ object.oems.count }} 个</a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联地址 : </div>
+                <div class="lf form-input">
+                    <a href="#" class="link-underline">{{ object.ipline_set.count }} 个</a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联群组 : </div>
+                <div class="lf form-input">
+                    <a href="#" class="link-underline">{{ object.hostgroups.count }} 个</a>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_host" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="delete_host" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,host_list = "{% url 'xm2cloud_cmp:hosts' %}"
+        ,host_delete_api = "{% url 'xm2cloud_cmp:api_host_delete' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#delete_host').linkbutton({
+            onClick: function () {
+                var that = this;
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var host_delete_url = host_delete_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: host_delete_url,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: host_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#goback_host').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: host_list});
+            }
+        });
+    })
+</script>

@@ -1,0 +1,473 @@
+{% extends 'xm2cloud_cmp/_layout.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <style type="text/css">
+        #host_create_form table tr, #host_update_form table tr{
+            height: 30px;
+        }
+    </style>
+{% endblock %}
+
+{% block main_container %}
+<div class="easyui-layout" data-options="fit:true">
+    <div class="absolute-head" data-options="region:'north',border:false" title="主机列表">
+        <div class="head-content">
+            <div class="lf active">
+                <span>集群:</span>
+                <select id="switch_cluster" _target="cluster_name" class="easyui-combobox" data-options="width:200">
+                    <option value="">所有集群</option>
+                    {% for cluster in clusters %}
+                        {% if cluster.pk == clusterid %}
+                            <option value="{{ cluster.pk }}" selected>{{ cluster.name }}</option>
+                        {% else %}
+                            <option value="{{ cluster.pk }}">{{ cluster.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <span>群组: </span>
+                <select id="switch_hostgroup" _target="hostgroup_name" class="easyui-combobox" data-options="width:300">
+                    <option value="">所有群组</option>
+                    {% for hostgroup in hostgroups %}
+                        {% if hostgroup.pk == hostgroupid %}
+                            <option value="{{ hostgroup.pk }}" selected>{{ hostgroup.name }}</option>
+                        {% else %}
+                            <option value="{{ hostgroup.pk }}">{{ hostgroup.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <span>区域: </span>
+                <select id="switch_continent" _target="continent_name" class="easyui-combobox" data-options="width:200">
+                    <option value="">所有区域</option>
+                    {% for continent in continents %}
+                        {% if continent.pk == continentid %}
+                            <option value="{{ continent.pk }}" selected>{{ continent.name }}</option>
+                        {% else %}
+                            <option value="{{ continent.pk }}">{{ continent.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <span>主机: </span>
+                <input id="fuzzy_hostsearch" class="easyui-textbox" style="width: 330px;height: 20px"
+                       data-options="prompt:'搜一下, 又不会怀孕～'">
+                <a id="host_search" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                    <i class="fa fa-search"></i> 搜一下
+                </a>
+            </div>
+        </div>
+        <div class="action-content">
+            <div class="lf">
+                <a id="import" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                    <i class="fa fa-download" aria-hidden="true"></i> 导入主机
+                </a>
+                <a id="add" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                    <i class="fa fa-plus fit-panel-font-awesome" aria-hidden="true"></i> 添加主机
+                </a>
+                <a id="more" href="#" class="easyui-menubutton button-line-white button-line-unbackground">
+                    <i class="fa fa-user-circle-o" aria-hidden="true"></i> 更多操作
+                    <div id="more_tools" style="display: none;">
+                        <div>设置标签</div>
+                        <div>登陆绑定</div>
+                        <div>授权管理</div>
+                        <div>同步主机</div>
+                        <div>变更主机</div>
+                        <div>删除主机</div>
+                    </div>
+                </a>
+            </div>
+            <div class="rt">
+                <ul>
+                    <li><input class="easyui-checkbox" checked> 自动刷新(60s)</li>
+                    <li class="sep"></li>
+                    <li title="刷新资源列表" ><a _action="reload" href="#"><i class="fa fa-refresh fit-panel-font-awesome"></i> 刷新</a></li>
+                    <li title="导出资源列表"><a id="export" href="#" class="easyui-linkbutton button-line-white button-line-unbackground"><i class="fa fa-upload" aria-hidden="true"></i></i></a></li>
+                    <li title="自定义列表项"><a id="item" href="#" class="easyui-linkbutton button-line-white button-line-unbackground"><i class="fa fa-cog" aria-hidden="true"></i></a></li>
+                    <li title="已删除的资源"><a id="recycle" href="#" class="easyui-linkbutton button-line-white button-line-unbackground"><i class="fa fa-recycle" aria-hidden="true"></i></a></li>
+                    <li title="进入在线帮助"><a id="help" href="#" class="easyui-linkbutton button-line-white button-line-unbackground"><i class="fa fa-question" aria-hidden="true"></i></a></li>
+                </ul>
+            </div>
+            <div _action="import"></div>
+            <div _action="add"></div>
+            <div _action="more"></div>
+        </div>
+    </div>
+    <div class="absolute-body" data-options="region:'center',border:false">
+        <table id="host_datagrid" class="easyui-datagrid" data-options="border:false"></table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts%}
+{{ block.super }}
+<script type="text/javascript">
+    var refresh_timer = null
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,cluster_list = "{% url 'xm2cloud_cmp:clusters' %}"
+        ,dashboardurl = "{% url 'xm2cloud_cmp:dashboard' %}"
+        ,hostgroup_list = "{% url 'xm2cloud_cmp:hostgroups' %}"
+        ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,host_create = "{% url 'xm2cloud_cmp:host_create' %}"
+        ,host_detail = "{% url 'xm2cloud_cmp:host_detail' id=0 %}"
+        ,host_create_api = "{% url 'xm2cloud_cmp:api_host_create' %}"
+        ,host_update = "{% url 'xm2cloud_cmp:host_update' id=0 %}"
+        ,host_update_api = "{% url 'xm2cloud_cmp:api_host_update' id=0 %}"
+        ,host_delete_api = "{% url 'xm2cloud_cmp:api_host_delete' id=0 %}";
+
+    // for auto load csrf_token
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    // for get parmars from url or combox
+    function get_query_params() {
+        var params = {}
+            ,url_is_running = $.get_urlparam('isRunning')
+            ,url_is_outdate = $.get_urlparam('isOutdate')
+            ,url_is_overdue = $.get_urlparam('isOverdue')
+            ,url_is_unusual = $.get_urlparam('isUnusual')
+            ,url_region_id = $.get_urlparam('regionId')
+            ,url_cluster_id = $.get_urlparam('clusterId')
+            ,url_hostgroup_id = $.get_urlparam('hostgroupId')
+            ,url_continent_id = $.get_urlparam('continentId')
+            ,url_manufacturer_id = $.get_urlparam('manufacturerId')
+            ,search_text = $('#fuzzy_hostsearch').textbox('getText')
+            ,com_cluster_id = $('#switch_cluster').combobox('getValue')
+            ,com_hostgroup_id = $('#switch_hostgroup').combobox('getValue')
+            ,com_continent_id = $('#switch_continent').combobox('getValue');
+
+        if(search_text!=''){
+            params['hostSearch'] = search_text;
+        }
+        if(url_is_running){
+            params['isRunning'] = url_is_running;
+        }
+        if(url_is_outdate){
+            params['isOutdate'] = url_is_outdate;
+        }
+        if(url_is_overdue){
+            params['isOverdue'] = url_is_overdue;
+        }
+        if(url_is_unusual){
+            params['isUnusual'] = url_is_unusual;
+        }
+        if(url_region_id){
+            params['regionId'] = url_region_id
+        }
+        if(url_manufacturer_id) {
+            params['manufacturerId'] = url_manufacturer_id
+        }
+        if(url_cluster_id || com_cluster_id){
+            params['clusterId'] = com_cluster_id || url_cluster_id;
+        }
+        if(url_hostgroup_id || com_hostgroup_id){
+            params['hostgroupId'] = com_hostgroup_id || url_hostgroup_id;
+        }
+        if(url_continent_id || com_continent_id){
+            params['continentId'] = com_continent_id || url_continent_id;
+        }
+
+        return params;
+    }
+
+    // for bind switch cluster and switch hostgroup
+    function init_switch_cluster_and_hostgroup(){
+        $('#switch_cluster').combobox({
+            onSelect: function (record) {
+                var text = record.text || '所有集群';
+                $('#cluster_name').text(text);
+            }
+        });
+        $('#switch_hostgroup').combobox({
+            onSelect: function (record) {
+                var text = record.text || '所有群组';
+                $('#hostgroup_name').text(text);
+            }
+        });
+        $('#switch_continent').combobox({
+            onSelect: function (record) {
+                var text = record.text || '所有区域';
+                $('#continent_name').text(text);
+            }
+        })
+    }
+
+    // for init host_datagrid
+    function init_host_datagrid(api, data) {
+        var get_data = data?data:{};
+        $('#host_datagrid').datagrid({
+            url: api,
+            fit: true,
+            method: 'GET',
+            queryParams: get_data,
+            pageSize: 20,
+            striped: false,
+            remoteSort: false,
+            rownumbers: true,
+            pagination: true,
+            fitColumns: true,
+            singleSelect: false,
+            checkOnSelect: false,
+            selectOnCheck: false,
+            onLoadSuccess: function (data) {
+                // for instance operator menubutton
+                var row_num = $(this).datagrid('getRows').length;
+                for(var i=0; i<row_num; i++){
+                    var char_id = 'ct_'+i
+                        ,mbutton_id = 'mb_'+i;
+                    $('#'+mbutton_id).menubutton({menu: '#mt_'+i});
+                    $('#'+char_id).on('click', function () {
+                        $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                    })
+                }
+
+                // for change cluster and hostgroup name select
+                var query_params = get_query_params();
+                if(query_params){
+                    var cluster_id = query_params['clusterId']
+                        ,hostgroup_id = query_params['hostgroupId']
+                        ,continent_id = query_params['continentId'];
+                    if(cluster_id) $('#switch_cluster').combobox('select', cluster_id);
+                    if(hostgroup_id) $('#switch_hostgroup').combobox('select', hostgroup_id);
+                    if(continent_id) $('#switch_continent').combobox('select', continent_id);
+                }
+            },
+            columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'id',width:'6.4%',title:'序号',sortable:true,
+                    formatter: function(value,row,index){
+                        var type_icon = ''
+                            ,firm_icon = '';
+                        switch (row.vmos.type){
+                            case 'linux':
+                                type_icon = '<i title="'+row.vmos.type+'" class="fa fa-linux" aria-hidden="true"></i>';
+                                break;
+                            case 'windows':
+                                type_icon = '<i title="'+row.vmos.type+'" class="fa fa-windows" aria-hidden="true"></i>';
+                                break;
+                            default:
+                                type_icon = '<i title="'+row.vmos.type+'" class="fa fa-linux" aria-hidden="true"></i>';
+                                break;
+                        }
+                        firm_icon = '<i title="'+row.firm.name+'" class="fa fa-cloud" aria-hidden="true"></i>';
+
+                        return type_icon+' '+firm_icon+' '+row.id;
+                    }
+                },
+                {
+                    field:'char',width:'3%',title:'监控',align:'center',
+                    formatter: function(value,row,index){
+                        return '<i id="ct_'+index+'" title="点击查看" class="fa fa-line-chart text-primary" aria-hidden="true"></i>'
+                    }
+                },
+                {
+                    field:'name',width:'9%',title:'主机名称',sortable:true,
+                    formatter: function(value,row,index) {
+                        return '<a target="_blank" href="'+host_detail.replace('/0/', '/'+row.id+'/')+'"><span class="extranal-link">'+value+'</span></a>';
+                    }
+                },
+                {
+                    field:'vmcpu',width:'4%',title:'CPU',sortable:true,
+                    formatter: function(value,row,index) {
+                        return row.vmcpu+' 核';
+                    }
+                },
+                {
+                    field:'vmmem',width:'4%',title:'内存',sortable:true,
+                    formatter: function(value,row,index) {
+                        return row.vmmem+' G';
+                    }
+                },
+                {
+                    field:'vmstatus',width:'6%',title:'主机状态',align:'center',
+                    formatter: function(value,row,index){
+                        return '<span class="font-green"><i class="fa fa-circle" aria-hidden="true"></i> 运行中</span>';
+                    }
+                },
+                {
+                    field:'ippool',width:'38%',title:'主机网络',
+                    formatter: function(value,row,index) {
+                        var item_list = [];
+                        for (var i = 0; i < value.length; i++) {
+                            var item = value[i];
+                            var line = item.name+'_'+item.band+'M_'+item.ip;
+                            item_list.push(line);
+                        }
+                        return item_list.join(', ');
+                    }
+                },
+                {
+                    field:'agentstatus',width:'6%',title:'AGENT',align:'center',
+                    formatter: function(value,row,index){
+                        return '<a class="font-red">未安装</a>';
+                    }
+                },
+                {
+                    field:'create_time',width:'10%',title:'创建时间',align:'center',sortable:true
+                },
+                {
+                    field:'operations',width:'8%',title:'其它操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_'+index+'" class="easyui-menubutton button-line-white button-line-unbackground"> '
+                                  + '<i class="fa fa-cog"></i> 操作 </a>';
+                        var extra = '<div id="mt_'+index+'" style="display: none;">'
+                                  + '<div>登陆主机</div>'
+                                  + '<div>执行记录</div>'
+                                  + '<div>登陆信息</div>'
+                                  + '<div>监控数据</div>'
+                                  + '<div>查看标签</div>'
+                                  + '<div>灰度发布</div></div>';
+                        return tools + extra;
+                    }
+                },
+                {
+                    field:'is_unusual',width:'5%',title:'异常',align:'center',
+                    formatter: function (value, row, index) {
+                        if(value) {
+                            return '<span class="font-red">待确认</span>';
+                        }else{
+                            return '<span class="font-green">已确认</span>';
+                        }
+                    }
+                }
+            ]]
+        });
+    }
+
+    // for bind fuzzy_hostsearch
+    function init_fuzzy_hostsearch(eid) {
+        $('#' + eid).bind('click', function () {
+
+            var query_params = {}
+                ,search_text = $('#fuzzy_hostsearch').textbox('getText')
+                ,cluster_id = $('#switch_cluster').combobox('getValue')
+                ,hostgroup_id = $('#switch_hostgroup').combobox('getValue')
+                ,continent_id = $('#switch_continent').combobox('getValue');
+
+            if(search_text != '') query_params['hostSearch'] = search_text;
+            if(cluster_id != '') query_params['clusterId'] = cluster_id;
+            if(hostgroup_id != '') query_params['hostgroupId'] = hostgroup_id;
+            if(continent_id != '') query_params['continentId'] = continent_id;
+
+            $('#host_datagrid').datagrid('load', query_params);
+        })
+    }
+
+    // for auto reload data from django app backend when click
+    function auto_reload_host_datagrid() {
+        $('div.action-content .rt span.checkbox-inner').on('click', function () {
+            var status = $(this).children('span.checkbox-checked').css('display') == 'none';
+            if(status){
+                refresh_timer = setInterval(function () {
+                    $('#host_datagrid').datagrid('reload');
+                }, 60000)
+            }else{
+                if(refresh_timer) clearInterval(refresh_timer);
+            }
+        });
+    }
+
+    // for handler add/modify/delete/grant action
+    function host_action_handler() {
+        $('div.action-content div.lf>a').on('click', function () {
+            var action = $(this).attr('id');
+            switch(action){
+                case 'import':
+                    $('div[_action='+action+']').dialog({
+                        width: 480,
+                        height: 270,
+                        cache: false,
+                        modal: false,
+                        closed: false,
+                        title: '导入主机',
+                        resizable: false,
+                        href: host_create,
+                        cls: 'messager-window',
+                        buttons: [{
+                            text: '<i class="fa fa-check font-green"></i> 保存',
+                            handler: function () {
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-times font-red"></i> 取消',
+                            handler: function () {
+                                $('div[_action='+action+']').dialog('close');
+                            }
+                        }]
+                    });
+                    break;
+                case 'add':
+                    $('div[_action='+action+']').dialog({
+                        width: 480,
+                        height: 270,
+                        cache: false,
+                        modal: false,
+                        closed: false,
+                        title: '添加主机',
+                        resizable: false,
+                        href: host_create,
+                        cls: 'messager-window',
+                        buttons: [{
+                            text: '<i class="fa fa-check font-green"></i> 保存',
+                            handler: function () {
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-times font-red"></i> 取消',
+                            handler: function () {
+                                $('div[_action='+action+']').dialog('close');
+                            }
+                        }]
+                    });
+                    break;
+                default:
+                    $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                    break;
+            }
+        });
+    }
+
+    // customer scripts entry
+    $(function () {
+        // for init pannel title
+        var title = '<a href="'+dashboardurl+'">仪表盘</a><i class="step fa fa-angle-right"></i>'
+                  + '<a href="'+ cluster_list+ '">集群[<span id="cluster_name">所有集群</span>]</a>'
+                  + '<i class="step fa fa-angle-right"></i><a href="'+hostgroup_list+'">群组['
+                  + '<span id="hostgroup_name">所有群组</span>]</a><i class="step fa fa-angle-right"></i>'
+                  + '<a href="#">区域[<span id="continent_name">所有区域</span>]</a>';
+        $('div.absolute-head').panel({title: title});
+
+        // for init more menubutton
+        $('#more').menubutton({
+            menu: '#more_tools'
+        });
+
+        // for bind switch cluster and switch hostgroup
+        init_switch_cluster_and_hostgroup();
+
+        // for init host_datagrid
+        // 1. because use of easyui-combox, so django template may not selected...
+        var query_params = get_query_params();
+        init_host_datagrid(host_list_api, query_params);
+
+        // for bind fuzzy_hostsearch
+        init_fuzzy_hostsearch('host_search');
+
+        // for bind refresh button with reload action
+        $('[_action="reload"]').on('click', function () {
+            $('#host_datagrid').datagrid('reload');
+        });
+
+        // for auto reload data from django app backend
+        refresh_timer = setInterval(function () {
+            $('#host_datagrid').datagrid('reload');
+        }, 60000);
+        auto_reload_host_datagrid(refresh_timer);
+
+        // for handler add/modify/delete/grant action
+        host_action_handler()
+    });
+</script>
+{% endblock %}

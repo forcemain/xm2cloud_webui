@@ -1,0 +1,582 @@
+{% extends 'xm2cloud_cmp/_layout.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/dygraph/dygraph.min.css' %}">
+{% endblock %}
+
+{% block main_container %}
+<div class="easyui-layout" data-options="fit:true">
+    <div class="monitor-tree" data-options="region:'west',border:false,title:'选择监控范围',collapsed:true">
+        <ul id="monitor_tree" class="easyui-tree" data-options="animate:true,onlyLeafCheck:true,checkbox:true">
+            <li data-options="state:'closed',iconCls:'hide'">
+                <span>
+                    <i _role="workspace" _workspace_id="0" class="fa fa-codepen" aria-hidden="true"> 工作空间 - 李满满的工作空间</i>
+                </span>
+                <ul></ul>
+            </li>
+        </ul>
+    </div>
+    <div class="monitor-board" data-options="region:'center',border:false">
+        <div id="monitor-board-tab" class="easyui-tabs" data-options="fit:true">
+            <div title="基础监控" data-options="closable:false">
+                <div class="tools">
+                    <div class="lf">
+                        <a _from="-1h" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">1小时</a>
+                        <a _from="-3h" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">3小时</a>
+                        <a _from="-6h" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">6小时</a>
+                        <a _from="-12h" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">12小时</a>
+                        <a _from="-1d" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">1天</a>
+                        <a _from="-3d" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">3天</a>
+                        <a _from="-7d" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">7天</a>
+                        <a _from="-14d" href="#" class="easyui-linkbutton button-line-white button-line-unbackground" onclick="from_click_handler(this);">14天</a>
+                    </div>
+                    <div class="rt">
+                        <span>开始时间: </span>
+                        <input id="end_time" class="easyui-datetimebox" data-options="showSeconds:true,width:179">
+                        <span>结束时间: </span>
+                        <input id="sta_time" class="easyui-datetimebox" data-options="showSeconds:true,width:179">
+                        <a id="clear" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">清空</a>
+                        <a _action="reload" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">查询</a>
+                    </div>
+                    <div class="clear"></div>
+                </div>
+                <div class="aggregat-area">
+                    {% for metric in metrics %}
+                    <div class="aggregat-metric-box {% cycle 'lf' 'rt' %}">
+                        <div class="aggregat-metric-box-head">
+                            <div class="lf">
+                                <span id="{{ metric.suffix }}_box" >{{ metric.desc }}</span>
+                            </div>
+                            <div class="rt">
+                                <a href="#" title="聚合查询"><i class="fa fa-table" aria-hidden="true"></i></a>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="aggregat-metric-box-body" id="{{metric.suffix}}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div title="业务监控" data-options="closable:false">
+                <div class="tools">
+                    <div class="lf"></div>
+                    <div class="rt"></div>
+                </div>
+                <div class="clear"></div>
+            </div>
+            <div title="链路监控" data-options="closable:false"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/dygraph/dygraph.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/dygraph/synchronizer.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/date.js' %}"></script>
+<script type="text/javascript">
+    var dygraph_list = []
+        ,global_target = []
+        ,checked_host = []
+        ,workspace_loaded = false
+        ,cluster_loaded = false
+        ,hostgroup_loaded = false
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,render_url = '{{ render_url }}'
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+        ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}";
+
+    // for auto load csrf_token
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    // for bind clear handler
+    function clear_datatime_value() {
+        $('#sta_time').datetimebox('setValue', '');
+        $('#end_time').datetimebox('setValue', '');
+    }
+
+    // for resize metric size
+    function resize_all_metric_size() {
+        setTimeout(function () {
+            $('div.aggregat-metric-box-body').each(function (index, item) {
+                $('canvas').width($(item).parent().width());
+            });
+        }, 5);
+    }
+
+    // for reload metric graph data
+    function reload_metric_graph_data(e, parameter) {
+        var json_url = render_url+'?'
+            ,parameter = parameter?parameter:{}
+            ,sta_time = $('#sta_time').datetimebox('getValue')
+            ,end_time = $('#end_time').datetimebox('getValue');
+        var sta_metric_time = to_metrictime(parse_date(sta_time))
+            ,end_metric_time = to_metrictime(parse_date(end_time));
+
+        if(!parameter['noNullPoints']) parameter['noNullPoints'] = 'true';
+        if(!parameter['format']) parameter['format'] = 'dygraph';
+        if(!parameter['target']) parameter['target'] = e.id;
+        if(!parameter['width']) parameter['width'] = $(e).parent().width();
+        if(!parameter['from']){
+            if(sta_metric_time && end_metric_time){
+                parameter['from'] = sta_metric_time;
+                parameter['until'] = end_metric_time;
+            }else{
+                parameter['from'] = '-24h';
+            }
+        }
+
+        for(var p in parameter){
+            if(parameter[p] instanceof Array){
+                for(var i=0;i<parameter[p].length;i++){
+                    var v = parameter[p][i];
+                    json_url += '&' + p + '=' + v;
+                }
+            }else {
+                json_url += '&' + p + '=' + parameter[p];
+            }
+        }
+        $.ajax({
+            type: 'GET',
+            url: json_url,
+            dataType: 'json',
+            success: function (data) {
+                if(!Object.keys(data).length){
+                    $(e).html('');
+                    return;
+                }
+                var g = new Dygraph(e, data.data, {
+                    width: $(e).parent().width(),
+                    strokeWidth: 1,
+                    animatedZooms: true,
+                    highlightCircleSize: 3,
+                    fillGraph: true,
+                    rollPeriod: 1,
+                    legend: 'onmouseover',
+                    labels: data.labels,
+                    labelsSeparateLines: true,
+                    axes: {
+                        x: {
+                            valueFormatter: function(ts) {
+                                return to_strdatetime(ts);
+                            },
+                            axisLabelFormatter: function(ts) {
+                                return to_strtime(ts);
+                            }
+                        },
+                        y: {
+                            valueFormatter: function (y) {
+                                switch(e.id){
+                                    case 'cpu':
+                                        return y.toFixed(2)+' %';
+                                        break;
+                                    case 'mem':
+                                        return y.toFixed(2)+' %';
+                                        break;
+                                    case 'band':
+                                        return (y/1024).toFixed(2)+' M';
+                                        break;
+                                    default:
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                }
+                            },
+                            axisLabelFormatter: function(y) {
+                                switch(e.id){
+                                    case 'cpu':
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                    case 'mem':
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                    case 'band':
+                                        return (y/1024).toFixed(2);
+                                        break;
+                                    default:
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                }
+                            }
+
+                        }
+                    }
+                });
+                if($.inArray(g, dygraph_list)==-1) dygraph_list.push(g);
+                if(dygraph_list.length>=2) {
+                    Dygraph.synchronize(dygraph_list, {zoom: true, selection: true});
+                }
+                // for resize all graph
+                resize_all_metric_size();
+            }
+        });
+    }
+
+    // for reload all metric data
+    function reload_all_metric_data(targets, parameter) {
+        var targets = targets?targets:[]
+            ,parameter = parameter?parameter:{};
+        global_target = targets; if(!targets.length) return;
+        $('div.aggregat-metric-box-body').each(function (index, item) {
+            parameter['target'] = [];
+            switch (item.id){
+                case 'cpu':
+                    var cluster_target = []
+                        ,hostgroup_target = []
+                        ,workspace_target = [];
+                    for(var i=0;i<targets.length;i++){
+                        var target = targets[i];
+                        switch (target.role) {
+                            case 'host':
+                                parameter['target'].push(target.prefix+'.'+'cpu');
+                                break;
+                            case 'hostgroup':
+                                hostgroup_target.push(target.prefix+'.'+'cpu');
+                                break;
+                            case 'cluster':
+                                cluster_target.push(target.prefix+'.'+'cpu');
+                                break;
+                            case 'workspace':
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                            default:
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                        }
+                    }
+                    if(hostgroup_target.length>0){
+                        parameter['target'].push('alias(minSeries('+hostgroup_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+hostgroup_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+hostgroup_target.join(',')+'),"avg")');
+                    }
+                    if(cluster_target.length>0){
+                        parameter['target'].push('alias(minSeries('+cluster_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+cluster_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+cluster_target.join(',')+'),"avg")');
+                    }
+                    break;
+                case 'mem':
+                    var cluster_target = []
+                        ,hostgroup_target = []
+                        ,workspace_target = [];
+                    for(var i=0;i<targets.length;i++){
+                        var target = targets[i];
+                        switch (target.role) {
+                            case 'host':
+                                parameter['target'].push(target.prefix+'.'+'mem');
+                                break;
+                            case 'hostgroup':
+                                hostgroup_target.push(target.prefix+'.'+'mem');
+                                break;
+                            case 'cluster':
+                                cluster_target.push(target.prefix+'.'+'mem');
+                                break;
+                            case 'workspace':
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                            default:
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                        }
+                    }
+                    if(hostgroup_target.length>0){
+                        parameter['target'].push('alias(minSeries('+hostgroup_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+hostgroup_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+hostgroup_target.join(',')+'),"avg")');
+                    }
+                    if(cluster_target.length>0){
+                        parameter['target'].push('alias(minSeries('+cluster_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+cluster_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+cluster_target.join(',')+'),"avg")');
+                    }
+                    break;
+                case 'band':
+                    var cluster_target = []
+                        ,hostgroup_target = []
+                        ,workspace_target = [];
+                    for(var i=0;i<targets.length;i++){
+                        var target = targets[i];
+                        switch (target.role) {
+                            case 'host':
+                                parameter['target'].push(target.prefix+'.'+'band');
+                                break;
+                            case 'hostgroup':
+                                hostgroup_target.push(target.prefix+'.'+'band');
+                                break;
+                            case 'cluster':
+                                cluster_target.push(target.prefix+'.'+'band');
+                                break;
+                            case 'workspace':
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                            default:
+                                $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                                break;
+                        }
+                    }
+                    if(hostgroup_target.length>0){
+                        parameter['target'].push('alias(minSeries('+hostgroup_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+hostgroup_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+hostgroup_target.join(',')+'),"avg")');
+                    }
+                    if(cluster_target.length>0){
+                        parameter['target'].push('alias(minSeries('+cluster_target.join(',')+'),"min")');
+                        parameter['target'].push('alias(maxSeries('+cluster_target.join(',')+'),"max")');
+                        parameter['target'].push('alias(averageSeries('+cluster_target.join(',')+'),"avg")');
+                    }
+                    break;
+            }
+            // for reload metric dygraph data
+            reload_metric_graph_data(item, parameter);
+        });
+        parameter = {};
+        $.messager.progress('close');
+    }
+
+    // for handler host check event
+    function host_check_handler(node) {
+        var target = $(node.text);
+        var role = target.attr('_role');
+        var role_id = target.attr('_'+role+'_id');
+
+        var targets = [];
+        var etarget = $('#monitor_tree');
+        var checked = etarget.tree('getChecked');
+        for(var i=0;i<checked.length;i++){
+            var s=$(checked[i].text).attr('_prefix');
+            targets.push({prefix: s, role: role});
+        }
+        reload_all_metric_data(targets, {});
+    }
+
+    // for handler workspace click event
+    function workspace_click_handler(node) {
+
+    }
+
+    // for handler cluster click event
+    function cluster_click_handler(node) {
+        var target = $(node.text);
+        var role = target.attr('_role');
+        var role_id = target.attr('_'+role+'_id');
+        $.ajax({
+            type: 'GET',
+            url: host_list_api,
+            data: {'clusterId': role_id},
+            dataType: 'json',
+            success: function (data) {
+                var targets = [];
+                for(var i=0;i<data.total;i++){
+                    var s=data.rows[i].remoteip.replace(/\./g, '-');
+                    targets.push({prefix: s, role: role});
+                }
+                reload_all_metric_data(targets);
+            }
+        })
+    }
+
+    // for handler hostgroup click event
+    function hostgroup_click_handler(node) {
+        var target = $(node.text);
+        var role = target.attr('_role');
+        var role_id = target.attr('_'+role+'_id');
+        $.ajax({
+            type: 'GET',
+            url: host_list_api,
+            data: {'hostgroupId': role_id},
+            dataType: 'json',
+            success: function (data) {
+                var targets = [];
+                for(var i=0;i<data.total;i++){
+                    var s=data.rows[i].remoteip.replace(/\./g, '-');
+                    targets.push({prefix: s, role: role});
+                }
+                reload_all_metric_data(targets);
+            }
+        })
+
+    }
+
+    // for handler host click event
+    function host_click_handler(node) {
+        var target = $(node.text);
+        var role = target.attr('_role');
+        var role_id = target.attr('_'+role+'_id');
+
+        var targets = [];
+        var etarget = $('#monitor_tree');
+        var selected = etarget.tree('getSelected');
+        var s=$(selected.text).attr('_prefix');
+        targets.push({prefix: s, role: role});
+
+        reload_all_metric_data(targets);
+    }
+    
+    // init expand cluster/hostgroup/host
+    function init_monitor_tree(eid) {
+        var etarget = $('#'+eid);
+        var options = etarget.tree('options');
+        etarget.tree({
+            onBeforeExpand: function (node) {
+                var target = $(node.text);
+                var role = target.attr('_role');
+                var role_id = target.attr('_'+role+'_id');
+                $.messager.progress({text: 'Loading...'});
+                switch (role){
+                    case 'workspace':
+                        options.url = cluster_list_api;
+                        options.method = 'GET';
+                        options.loadFilter = function(data, parent){
+                            var formated_data = [];
+                            for(var i=0;i<data.total;i++){
+                                var d = data.rows[i];
+                                formated_data.push({
+                                    text: '<i _role="cluster" _cluster_id="'+d.id+'" class="fa fa-connectdevelop" aria-hidden="true"> 集群 - '+d.name+'</i>',
+                                    state: 'closed',
+                                    iconCls: 'hide'
+                                })
+                            }
+                            workspace_loaded = true;
+                            $.messager.progress('close');
+
+                            return formated_data;
+                        };
+                        if(workspace_loaded) $.messager.progress('close');
+                        break;
+                    case 'cluster':
+                        options.url = hostgroup_list_api;
+                        options.method = 'GET';
+                        options.queryParams = {'clusterId': role_id};
+                        options.loadFilter = function (data, parent) {
+                            var formated_data = [];
+                            for(var i=0;i<data.total;i++){
+                                var d = data.rows[i];
+                                formated_data.push({
+                                    text: '<i _role="hostgroup" _hostgroup_id="'+d.id+'" class="fa fa-tasks" aria-hidden="true"> 群组 - '+d.name+'</i>',
+                                    state: 'closed',
+                                    iconCls: 'hide'
+                                })
+                            }
+                            cluster_loaded = true;
+                            $.messager.progress('close');
+
+                            return formated_data;
+                        };
+                        if(cluster_loaded) $.messager.progress('close');
+                        break;
+                    case 'hostgroup':
+                        options.url = host_list_api;
+                        options.method = 'GET';
+                        options.queryParams = {'hostgroupId': role_id};
+                        options.loadFilter = function (data, parent) {
+                            var formated_data = [];
+                            for(var i=0;i<data.total;i++){
+                                var d = data.rows[i], t = 'linux';
+                                switch (d.vmos.type){
+                                    case 'linux':
+                                        t = 'linux';
+                                        break;
+                                    case 'windows':
+                                        t = 'windows';
+                                        break;
+                                    case 'apple':
+                                        t = 'apple';
+                                }
+                                var metric_prefix = d.remoteip.replace(/\./g, '-');
+                                formated_data.push({
+                                    text: '<i _role="host" _host_id="'+d.id+'" _prefix="'+metric_prefix+'" class="fa fa-'+t+'" aria-hidden="true"> 主机 - '+d.name+'</i>',
+                                    state: 'open',
+                                    iconCls: 'hide'
+                                })
+                            }
+                            hostgroup_loaded = true;
+                            $.messager.progress('close');
+
+                            return formated_data;
+                        };
+                        if(hostgroup_loaded) $.messager.progress('close');
+                        break;
+                    default:
+                        $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+                        break
+                }
+            },
+            onClick: function (node) {
+                var target = $(node.text);
+                var role = target.attr('_role');
+                var role_id = target.attr('_'+role+'_id');
+                $.messager.progress({text: 'Loading...'});
+                switch (role){
+                    case 'workspace':
+                        workspace_click_handler(node);
+                        break;
+                    case 'cluster':
+                        cluster_click_handler(node);
+                        break;
+                    case 'hostgroup':
+                        hostgroup_click_handler(node);
+                        break;
+                    case 'host':
+                        host_click_handler(node);
+                    default:
+                        break;
+                }
+            },
+            onCheck: function (node, checked) {
+                var target = $(node.text);
+                var role = target.attr('_role');
+                var role_id = target.attr('_'+role+'_id');
+                // for handler host check action
+                if(checked){
+                    if($.inArray(role_id, checked_host)==-1){
+                        checked_host.push(role_id)
+                    }
+                }else{
+                    checked_host.pop(role_id)
+                }
+                // for handler host check event
+                host_check_handler(node);
+            }
+
+        });
+    }
+
+
+    // for bind from click event
+    function from_click_handler(e) {
+        var from = $(e).attr('_from');
+        var parameter = {from: from};
+        reload_all_metric_data(global_target, parameter);
+    }
+
+    $(function () {
+        // for bind clear handler
+        $('#clear').on('click', function () {
+            clear_datatime_value();
+        });
+        // for regraph when resize
+        $('.monitor-tree').panel({
+            onCollapse: resize_all_metric_size,
+            onExpand: resize_all_metric_size,
+            onResize: resize_all_metric_size
+        });
+
+        // init expand cluster/hostgroup/host
+        init_monitor_tree('monitor_tree');
+
+        // for reload metric dygraph data
+        setInterval(function () {
+            reload_all_metric_data(global_target);
+        }, 300000);
+
+        // for bind refresh button with reload action
+        $('[_action="reload"]').on('click', function () {
+            reload_all_metric_data(global_target);
+        });
+    });
+</script>
+{% endblock %}

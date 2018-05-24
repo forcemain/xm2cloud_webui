@@ -1,0 +1,112 @@
+{% extends 'xm2cloud_auth/_base.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <style type="text/css">
+        body {
+            background: url("{% static 'xm2cloud_auth/img/background.jpg' %}") center center / cover no-repeat fixed;
+        }
+    </style>
+{% endblock %}
+
+{% block head %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'xm2cloud_auth/js/jquery.cookie.js' %}"></script>
+{% endblock %}
+
+{% block container %}
+    <div class="body">
+        <div class="body-container">
+            <div class="auth">
+                <div class="logo">
+                    <a href="{% url 'xm2cloud_auth:login' %}">
+                        <img src="{% static 'xm2cloud_auth/img/xm2cloud-header.png' %}" alt="XM2CLOUD">
+                    </a>
+                </div>
+                <div class="title">用户登陆</div>
+                <div class="input-group">
+                    <div class="input">
+                        <input id="username" name="username" class="easyui-textbox" prompt="账号" style="width: 100%;">
+                    </div>
+                    <div class="input">
+                        <input id="password" name="password" class="easyui-passwordbox" prompt="密码" style="width: 100%;">
+                    </div>
+                    <div class="input">
+                        <input id="checkcode" name="checkcode" class="easyui-textbox" prompt="验证码" style="width: 74%;">
+                        <div class="rt checkcode">
+                            <img id="checkcode_img" src="{% url 'xm2cloud_auth:checkcode' %}" alt="Loading...">
+                        </div>
+                    </div>
+                </div>
+                <div class="action">
+                    <div class="action-button">
+                        <button id="auth_login">登陆</button>
+                    </div>
+                    <div class="action-link">
+                        <a href="{% url 'xm2cloud_auth:password_reset' %}">忘记密码</a>
+                        |
+                        <a href="{% url 'xm2cloud_auth:register' %}">立即注册</a>
+                    </div>
+                </div>
+                <div class="describe">
+                    您现在访问的是XM2CLOUD在线版服务. XM2CLOUD还支持本地化部署,即在您的环境下部署一套XM2CLOUD,如需帮助,请
+                    <a href="#" class="extranal-link">联系我们</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var ajax_csrf_token = "{{ csrf_token }}"
+            ,login_api = "{% url 'xm2cloud_auth:api_login' %}"
+            ,checkcode_url = "{% url 'xm2cloud_auth:checkcode' %}";
+
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+        
+        $(function () {
+            $('#checkcode_img').on('click', function () {
+                var _t = new Date().getTime();
+                var _src = checkcode_url+'?_t='+_t;
+                $(this).attr('src', _src);
+            });
+
+            var username = $.cookie('username');
+            if(username) $('#username').textbox('setValue', username);
+
+            var _html;
+            var _load;
+            $('#auth_login').on('click', function () {
+                var that = this
+                    ,username = $('#username').textbox('getValue')
+                    ,password = $('#password').passwordbox('getValue')
+                    ,checkcode = $('#checkcode').textbox('getValue');
+
+                if(!_html) _html = $(that).html();
+                _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+                $(that).html(_load);
+                $._ajax({
+                    url: login_api,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        var expires = new Date();
+                        expires.setTime(expires.getTime()+60*60*1000);
+                        $.cookie('username', username, {expires: expires});
+                        location.href = data.next;
+                    },
+                    complete: function () {
+                        $(that).html(_html);
+                        $('#checkcode_img').click();
+                        $('#checkcode').textbox('setValue', '');
+                    },
+                    data: {username: username, password: password, checkcode: checkcode}
+                })
+            });
+        });
+    </script>
+
+{% endblock %}

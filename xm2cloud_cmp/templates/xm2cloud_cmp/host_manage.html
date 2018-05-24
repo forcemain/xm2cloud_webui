@@ -1,0 +1,86 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-menu" region="west" title="" split="false" border="false" width="200">
+                <div class="menu-title">主机管理</div>
+                <div class="menu-body">
+                    <a class="menu-item active" name="host" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">计算资源</div>
+                    </a>
+                    <a class="menu-item" name="ipline" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">网络资源</div>
+                    </a>
+                    <a class="menu-item" name="iplinepackage" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">共享带宽</div>
+                    </a>
+                </div>
+            </div>
+            <div region="center" title="" split="false" border="false">
+                <div class="easyui-layout body-container" fit="true">
+                    <div class="nav-tool" region="north" title="<a class='link-underline'>计算资源</a>" split="false"
+                         border="false" collapsible="false">
+                        <div class="nav-tool-container">
+                            <div class="lf left-tools">
+                                <a name="add" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-plus"> 添加</i></a>
+                                <a name="edit" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-pencil"> 修改</i></a>
+                                <a name="del" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-minus"> 删除</i></a>
+                            </div>
+                            <div class="rt right-tools">
+                                <input id="global_search" name="global_search" class="easyui-textbox" prompt="搜一下, 又不会怀孕～">
+                                <a href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-search"> 搜一下</i></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-page" region="center" title="" split="false" border="false" id="control">
+            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+    <script type="text/javascript">
+        var host_list = "{% url 'xm2cloud_cmp:hosts'%}"
+            ,ipline_list = "{% url 'xm2cloud_cmp:iplines'%}"
+            ,iplinepackage_list = "{% url 'xm2cloud_cmp:iplinepackages' %}";
+
+        $(function () {
+            $('a.menu-item').unbind('click').bind('click', function () {
+                var nav_title = $(this).find('.nav-title').text();
+                $('.nav-tool').panel('setTitle', "<a class='link-underline'>"+nav_title+"</a>");
+                $(this).addClass('active').siblings('a').removeClass('active');
+                var options = {}
+                    ,name = $(this).attr('name');
+                switch (name){
+                    case 'host':
+                        options.href = host_list;
+                        break;
+                    case 'ipline':
+                        options.href = ipline_list;
+                        break;
+                    case 'iplinepackage':
+                        options.href = iplinepackage_list;
+                        break;
+                }
+                $._control('#control', options);
+            });
+            var navname = $.url(location.href).param('navName');
+            $('a.menu-item[name="' + (navname || 'host') + '"]').click();
+        });
+    </script>
+{% endblock %}

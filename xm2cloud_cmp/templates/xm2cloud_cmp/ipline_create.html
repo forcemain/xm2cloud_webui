@@ -1,0 +1,133 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认新增 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">首选线路 : </div>
+                <div class="lf form-input"><input id="is_preferred" name="is_preferred" type="checkbox" checked></div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">线路 : </div>
+                <div class="lf form-input">
+                    <select id="line" name="line" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        <option value="BGP">BGP</option>
+                        <option value="移动">移动</option>
+                        <option value="联通">联通</option>
+                        <option value="电信">电信</option>
+                        <option value="其它">其它</option>
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">地址 : </div>
+                <div class="lf form-input">
+                    <input id="ip" name="ip" class="easyui-textbox" value="" prompt="8.8.8.8" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">带宽 : </div>
+                <div class="lf form-input">
+                    <input id="band" name="band" class="easyui-textbox" value="" prompt="30" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes" name="notes" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联主机 : </div>
+                <div class="lf form-input">
+                    <select id="host" name="host" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        {% for host in hosts %}
+                            <option value="{{ host.pk }}">{{ host.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联套餐 : </div>
+                <div class="lf form-input">
+                    <select id="package" name="package" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        {% for package in iplinepackages %}
+                            <option value="{{ package.pk }}">{{ package.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_ipline" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="create_ipline" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,ipline_list = "{% url 'xm2cloud_cmp:iplines' %}"
+        ,ipline_create_api = "{% url 'xm2cloud_cmp:api_ipline_create'%}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#create_ipline').linkbutton({
+            onClick: function () {
+                var that = this
+                    ,ip = $('#ip').textbox('getValue')
+                    ,band = $('#band').textbox('getValue')
+                    ,line = $('#line').combobox('getValue')
+                    ,host = $('#host').combobox('getValue')
+                    ,package = $('#package').combobox('getValue')
+                    ,is_preferred = $('#is_preferred').is(':checked');
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                $._ajax({
+                    url: ipline_create_api,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: ipline_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {ip: ip, band: band, line: line, host: host, package: package, is_preferred: is_preferred}
+                })
+            }
+        });
+        $('#goback_ipline').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: ipline_list});
+            }
+        });
+    })
+</script>

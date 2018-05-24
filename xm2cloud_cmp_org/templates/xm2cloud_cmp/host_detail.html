@@ -1,0 +1,403 @@
+{% extends 'xm2cloud_cmp/_layout.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'xm2cloud_cmp/../../../xm2cloud_cmp/static/xm2cloud_cmp/js/dygraph/dygraph.min.css' %}">
+{% endblock %}
+
+{% block main_container %}
+<div class="easyui-layout" data-options="fit:true">
+    <div class="absolute-head" data-options="region:'north',border:false">
+        <div class="head-content">
+            <div class="lf">
+                <span class="instance-id">
+                    <i class="fa fa-server" aria-hidden="true"></i>
+                    {{ object.name }}
+                </span>
+            </div>
+            <div class="rt">
+                <a _action="reload" title="刷新" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                    <i class="fa fa-refresh" aria-hidden="true"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="absolute-body" data-options="region:'center',border:false">
+        <div class="detail-container">
+            <div class="lf host-detail">
+                <div class="table-viewer">
+                    <div class="table-viewer-head">
+                        <div class="lf">
+                            <span>基本信息</span>
+                        </div>
+                        <div class="rt">
+                            <a href="{{ terminal_url }}" target="_blank" class="easyui-linkbutton button-line-white button-line-unbackground">远程连接</a>
+                            <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                                更多
+                            </a>
+                        </div>
+                    </div>
+                    <div class="table-viewer-body">
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">编号: </span></li>
+                            <li class="rt">{{ object.id }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">厂商: </span></li>
+                            <li class="rt"><a href="{{ object.firm.website }}">{{ object.firm.name }}</a></li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">区域: </span></li>
+                            <li class="rt">{{ object.area.name }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">地域: </span></li>
+                            <li class="rt">{{ object.area.continent.name }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">名称: </span></li>
+                            <li class="rt">{{ object.name }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">描述: </span></li>
+                            <li class="rt"></li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">规格: </span></li>
+                            <li class="rt">ecs.n1.small</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">密钥: </span></li>
+                            <li class="rt">未绑定</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">标签: </span></li>
+                            <li class="rt">暂无</li>
+                        </ul>
+                    </div>
+                </div>
+                {% if object.hostgroups %}
+                <div class="table-viewer">
+                    <div class="table-viewer-head">
+                        <div class="lf">
+                            <span>业务信息</span>
+                        </div>
+                        <div class="rt">
+                            <a href="#" class="easyui-linkbutton button-line-grayish button-line-unbackground">点击续费</a>
+                             <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                                更多
+                            </a>
+                        </div>
+                    </div>
+                    <div class="table-viewer-body">
+                        {% for hostgroup in object.hostgroups.all %}
+                            <ul class="table-viewer-item">
+                                <li class="lf"><span class="text-muted">{{ hostgroup.cluster.name }}</span></li>
+                                <li class="rt">{{ hostgroup.name }}</li>
+                            </ul>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="table-viewer">
+                    <div class="table-viewer-head">
+                        <div class="lf">
+                            <span>配置信息</span>
+                        </div>
+                        <div class="rt">
+                            <a href="#" class="easyui-linkbutton button-line-grayish button-line-unbackground">换系统盘</a>
+                            <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                                更多
+                            </a>
+                        </div>
+                    </div>
+                    <div class="table-viewer-body">
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">核心: </span></li>
+                            <li class="rt">{{ object.vmcpu }}核</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">内存: </span></li>
+                            <li class="rt">{{ object.vmmem }}G</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">系统: </span></li>
+                            <li class="rt">{{ object.vmos.name }} 64位</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">公网: </span></li>
+                            <li class="rt">{{ object.remoteip }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">内网: </span></li>
+                            <li class="rt">{{ object.localip }}</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">计费: </span></li>
+                            <li class="rt">按固定带宽</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">带宽: </span></li>
+                            <li class="rt">{{ object.vmbandwidth }}M</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="table-viewer">
+                    <div class="table-viewer-head">
+                        <div class="lf">
+                            <span>付费信息</span>
+                        </div>
+                        <div class="rt">
+                            <a  href="#" class="easyui-linkbutton button-line-grayish button-line-unbackground">点击续费</a>
+                            <a  href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
+                                更多
+                            </a>
+                        </div>
+                    </div>
+                    <div class="table-viewer-body">
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">方式: </span></li>
+                            <li class="rt">包年包月</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">创建: </span></li>
+                            <li class="rt">2017-06-28 00：00 创建</li>
+                        </ul>
+                        <ul class="table-viewer-item">
+                            <li class="lf"><span class="text-muted">到期: </span></li>
+                            <li class="rt">2018-06-28 00：00 到期</li>
+                        </ul>
+
+                    </div>
+                </div>
+            </div>
+            <div class="rt host-detail-relation">
+                <div class="table-viewer">
+                    <div class="table-viewer-head">
+                        <div class="lf">
+                            <span>监控信息</span>
+                        </div>
+                        <div class="rt">
+                            <ul>
+
+                                <li class="rt fix-lineheight">
+                                    <a _action="reload" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">查询</a>
+                                </li>
+                                <li class="rt fix-lineheight">
+                                    <a id="clear" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">清空</a>
+                                </li>
+                                 <li class="rt fix-lineheight">
+                                    <span>结束时间: </span>
+                                    <input id="end_time" class="easyui-datetimebox" data-options="showSeconds:true,width:179">
+                                </li>
+                                <li class="rt fix-lineheight">
+                                    <span>开始时间: </span>
+                                    <input id="sta_time" class="easyui-datetimebox" data-options="showSeconds:true,width:179">
+                                </li>
+                                <li class="rt fix-lineheight">
+                                    <a target="_blank" href="#"><span class="extranal-link">设置报警规则</span></a>
+                                </li>
+                                <li class="rt fix-lineheight">
+                                    <a target="_blank" href="{% url 'xm2cloud_cmp:monitors' %}"><span class="extranal-link">查看更多指标</span></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="metric_area" class="table-viewer-body">
+                        {% for metric in metrics %}
+                        <div class="metric-box">
+                            <div class="metric-box-head">
+                                <div class="lf"><span>{{ metric.desc }}</span></div>
+                                <div class="rt">
+                                    <a href="#" _target="{{ metric.prefix }}.{{ metric.suffix }}" target="_blank" title="导出数据" class="export-png easyui-linkbutton button-line-white button-line-unbackground">
+                                        <i class="fa fa-download" aria-hidden="true"></i>
+                                    </a>
+                                    <a href="#" _target="{{ metric.prefix }}.{{ metric.suffix }}" target="_self" title="大图展示" class="extend-png easyui-linkbutton button-line-white button-line-unbackground">
+                                        <i class="fa fa-arrows-alt" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                            <div class="metric-box-body" id="{{ metric.suffix }}" _prefix="{{ metric.prefix }}"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts%}
+{{ block.super }}
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../../xm2cloud_cmp/static/xm2cloud_cmp/js/dygraph/dygraph.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../../xm2cloud_cmp/static/xm2cloud_cmp/js/dygraph/synchronizer.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../../xm2cloud_cmp/static/xm2cloud_cmp/js/date.js' %}"></script>
+<script type="text/javascript">
+    var dygraph_list = []
+        ,render_url = '{{ render_url }}';
+
+     // for bind export-png button action
+    function init_export_png_handler(klass, target) {
+        $(klass).each(function (index, e) {
+            var target_id = $(e).attr('_target');
+            if(target_id != target.id) return;
+        });
+    }
+    // for bind expand-png button action
+    function init_extend_png_handler(klass, target) {
+        $(klass).each(function (index, e) {
+            // no implemented yet ...
+            var target_id = $(e).attr('_target');
+            if(target_id != target.id) return;
+        });
+    }
+    // for bind clear handler
+    function clear_datatime_value() {
+        $('#sta_time').datetimebox('setValue', '');
+        $('#end_time').datetimebox('setValue', '');
+    }
+    // for reload metric img data
+    function reload_metric_graph_data(e, parameter) {
+        var json_url = render_url+'?'
+            ,parameter = parameter?parameter:{}
+            ,sta_time = $('#sta_time').datetimebox('getValue')
+            ,end_time = $('#end_time').datetimebox('getValue');
+        var sta_metric_time = to_metrictime(parse_date(sta_time))
+            ,end_metric_time = to_metrictime(parse_date(end_time));
+        
+        if(!parameter['noNullPoints']) parameter['noNullPoints'] = 'true';
+        if(!parameter['format']) parameter['format'] = 'dygraph';
+        if(!parameter['target']) parameter['target'] = e.id;
+        if(!parameter['width']) parameter['width'] = $(e).parent().width();
+        if(!parameter['from']){
+            if(sta_metric_time && end_metric_time){
+                parameter['from'] = sta_metric_time;
+                parameter['until'] = end_metric_time;
+            }else{
+                parameter['from'] = '-1h';
+            }
+        }
+
+        for(var p in parameter){
+            json_url += '&'+p+'='+parameter[p];
+        }
+
+        $.ajax({
+            type: 'GET',
+            url: json_url,
+            dataType: 'json',
+            error: function (a, b, c) {
+                console.log(a);
+                console.log(b);
+                console.log(c);
+            },
+            success: function (data) {
+                var g = new Dygraph(e.id, data.data, {
+                    width: $(e).parent().width(),
+                    height: 240,
+                    strokeWidth: 1,
+                    animatedZooms: true,
+                    highlightCircleSize: 3,
+                    fillGraph: true,
+                    rollPeriod: 1,
+                    legend: 'follow',
+                    labels: data.labels,
+                    labelsSeparateLines: true,
+                    axes: {
+                        x: {
+                            valueFormatter: function(x) {
+                                return to_strdatetime(x);
+                            },
+                            axisLabelFormatter: function(x) {
+                                return to_strtime(x);
+                            }
+                        },
+                        y: {
+                            valueFormatter: function (y) {
+                                switch(e.id){
+                                    case 'cpu':
+                                        return y.toFixed(2)+' %';
+                                        break;
+                                    case 'mem':
+                                        return y.toFixed(2)+' %';
+                                        break;
+                                    case 'band':
+                                        return (y/1024).toFixed(2)+' M';
+                                        break;
+                                    default:
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                }
+                            },
+                            axisLabelFormatter: function(y) {
+                                switch(e.id){
+                                    case 'cpu':
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                    case 'mem':
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                    case 'band':
+                                        return (y/1024).toFixed(2)+' ';
+                                        break;
+                                    default:
+                                        return y.toFixed(2)+' ';
+                                        break;
+                                }
+                            }
+
+                        }
+
+                    }
+                });
+                if($.inArray(g, dygraph_list)==-1) dygraph_list.push(g);
+                if(dygraph_list.length>=2) {
+                    Dygraph.synchronize(dygraph_list, {zoom: true, selection: true});
+                }
+            }
+        });
+    }
+
+    // for reload metric dygraph data
+    function reload_all_metrics(klass) {
+        $(klass).each(function (index, item) {
+            var suffix = item.id
+                ,prefix = $(item).attr('_prefix');
+            var target = prefix+'.'+suffix;
+            var parameter = {target: [target]};
+            reload_metric_graph_data(item, parameter);
+            // for bind export-png button action
+            init_export_png_handler('a.export-png', item);
+            // for bind extend-png button action
+            init_extend_png_handler('a.extend-png', item);
+        });
+    }
+
+    $(function () {
+        // for bind clear handler
+        $('#clear').on('click', function () {
+            clear_datatime_value();
+        });
+
+        // for reload metric dygraph data
+        reload_all_metrics('div.metric-box-body');
+        setInterval(function () {
+            reload_all_metrics('div.metric-box-body');
+        }, 60000);
+
+        // for bind refresh button with reload action
+        $('[_action="reload"]').on('click', function () {
+            reload_all_metrics('div.metric-box-body');
+        });
+
+        // for bind unimplement method
+        $('a.extend-png').on('click', function () {
+            $.messager.alert('通知', '全新的变革,即将上线!', 'info');
+        });
+    })
+</script>
+{% endblock %}
+

@@ -1,0 +1,75 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-tool" region="north" title="<a class='link-underline'>群组管理</a>" split="false"
+                 border="false" collapsible="false">
+                <div class="nav-tool-container">
+                    <div class="lf left-tools">
+                        <a name="add" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-plus"> 添加</i></a>
+                        <a name="edit" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-pencil"> 修改</i></a>
+                        <a name="del" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-minus"> 删除</i></a>
+                    </div>
+                    <div class="rt right-tools">
+                        <input id="hostgroup_search" name="hostgroup_search" class="easyui-textbox" prompt="搜一下, 又不会怀孕～">
+                        <a href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-search"> 搜一下</i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control"
+                 href="{% url 'xm2cloud_cmp:hostgroups' %}">
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var ajax_csrf_token = "{{ csrf_token }}"
+            ,hostgroup_list = "{% url 'xm2cloud_cmp:hostgroups' %}"
+            ,hostgroup_create = "{% url 'xm2cloud_cmp:hostgroup_create' %}"
+            ,hostgroup_update = "{% url 'xm2cloud_cmp:hostgroup_update' id=0 %}"
+            ,hostgroup_delete = "{% url 'xm2cloud_cmp:hostgroup_delete' id=0 %}";
+
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+        $(function () {
+            $('a.tool-button').on('click', function () {
+                var that = this
+                    ,name = $(that).attr('name');
+
+                var options = {}
+                    ,selected = $('#hostgroup_datagrid').datagrid('getSelected');
+                switch (name){
+                    case 'add':
+                        options.href = hostgroup_create;
+                        break;
+                    case 'edit':
+                        if(!selected){
+                            options.href = hostgroup_list;
+                            break;
+                        }
+                        options.href = hostgroup_update.replace('/0/', '/'+selected.id+'/');
+                        break;
+                    case 'del':
+                        if(!selected){
+                            options.href = hostgroup_list;
+                            break;
+                        }
+                        options.href = hostgroup_delete.replace('/0/', '/'+selected.id+'/');
+                        break;
+                }
+                $._control('#control', options);
+            });
+        })
+    </script>
+{% endblock %}

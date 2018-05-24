@@ -1,0 +1,74 @@
+{% extends 'xm2cloud_auth/_base.html' %}
+{% load static %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_auth/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-menu" region="west" title="" split="false" border="false" width="200">
+                <div class="menu-title">账户管理</div>
+                <div class="menu-body">
+                    <a class="menu-item" name="security" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">安全设置</div>
+                    </a>
+                    <a class="menu-item active" name="baseinfo" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">基本资料</div>
+                    </a>
+                    <a class="menu-item" name="messages" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">消息中心</div>
+                    </a>
+                    <a class="menu-item" name="bindings" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">账号绑定</div>
+                    </a>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control">
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_auth/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var baseinfo_href = "{% url 'xm2cloud_auth:profile_baseinfo'%}"
+            ,security_href = "{% url 'xm2cloud_auth:profile_security'%}"
+            ,messages_href = ""
+            ,bindings_href = "";
+
+        $(function () {
+            $._control($('#control'), {href: baseinfo_href});
+            $('a.menu-item').on('click', function () {
+                $(this).addClass('active').siblings('a').removeClass('active');
+                var options = {}
+                    ,name = $(this).attr('name');
+                switch (name){
+                    case 'security':
+                        options.href = security_href;
+                        break;
+                    case 'baseinfo':
+                        options.href = baseinfo_href;
+                        break;
+                    case 'messages':
+                        options.href = messages_href;
+                        break;
+                    case 'bindings':
+                        options.href = bindings_href;
+                        break;
+                    default:
+                        break;
+                }
+                $._control('#control', options);
+            })
+        });
+    </script>
+{% endblock %}

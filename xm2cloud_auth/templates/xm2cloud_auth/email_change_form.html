@@ -1,0 +1,267 @@
+{% load static %}
+{% load security %}
+
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>密保邮箱</span>
+    </div>
+    {% if request.user.email and request.user.profile.operate_protect_method == 'email' %}
+    <div class="page-notice">
+        邮箱验证码验证, 账号 <a href="#" class="link-underline">{{ request.user.username|capfirst }}</a> 为确认是您本人操作, 请完成以下验证
+    </div>
+    {% endif %}
+    {% if request.user.profile.phone and request.user.profile.operate_protect_method == 'phone' %}
+    <div class="page-notice">
+        手机验证码验证, 账号 <a href="#" class="link-underline">{{ request.user.username|capfirst }}</a> 为确认是您本人操作, 请完成以下验证
+    </div>
+    {% endif %}
+    {% if request.user.profile.mfa_protect_is_enable and request.user.profile.operate_protect_method == 'mfa' %}
+    <div class="page-notice">
+        MFA验证码验证, 账号 <a href="#" class="link-underline">{{ request.user.username|capfirst }}</a> 为确认是您本人操作, 请完成以下验证
+    </div>
+    {% endif %}
+    <div class="page-body">
+        <div id="step_tabs" class="step-tabs easyui-tabs tabs-underline tab-color-darkblue" justified="true">
+            <div class="step-panel" title="<span class='badge color-darkblue'>1</span> 验证身份">
+                {% if request.user.profile.operate_protect_intensity == 'force' %}
+                    {% if request.user.email and request.user.profile.operate_protect_method == 'email' %}
+                        <div class="form-group">
+                        <div class="lf form-label"> 绑定邮箱 : </div>
+                        <div class="lf form-input">{{ request.user.email|hide_email }}</div>
+                        <div class="clear"></div>
+                        <div class="lf form-label"><span class="font-red">*</span> 验证码 : </div>
+                        <div class="lf form-input">
+                            <input method="email" class="checkcode easyui-textbox" value="" prompt="6位数字" data-options="width:'256',height:'32'">
+                            <a method="email" href="#" class="easyui-linkbutton no-border-radius" data-options="width:'122',height:'32'">获取邮箱验证码</a>
+                        </div>
+                        <div class="clear"></div>
+                        </div>
+                    {% elif request.user.profile.phone and request.user.profile.operate_protect_method == 'phone' %}
+                        <div class="form-group">
+                        <div class="lf form-label"> 绑定手机 : </div>
+                        <div class="lf form-input">{{ request.user.profile|hide_phone }}</div>
+                        <div class="clear"></div>
+                        <div class="lf form-label"><span class="font-red">*</span> 验证码 : </div>
+                        <div class="lf form-input">
+                            <input method="phone" class="checkcode easyui-textbox" value="" prompt="6位数字" data-options="width:'256',height:'32'">
+                            <a method="phone" href="#" class="easyui-linkbutton no-border-radius" data-options="width:'122',height:'32'">获取手机验证码</a>
+                        </div>
+                        <div class="clear"></div>
+                        </div>
+                    {% elif request.user.profile.mfa_protect_is_enable and request.user.profile.operate_protect_method == 'mfa' %}
+                        <div class="form-group">
+                        <div class="lf form-label"> 绑定APP : </div>
+                        <div class="lf form-input">Google Authenticator</div>
+                        <div class="clear"></div>
+                        <div class="lf form-label"><span class="font-red">*</span> 验证码 : </div>
+                        <div class="lf form-input">
+                            <input method="mfa" class="checkcode easyui-textbox" value="" prompt="6位数字" data-options="width:'380',height:'32'">
+                        </div>
+                        <div class="clear"></div>
+                        </div>
+                    {% else %}
+                        <div class="step-skip">首次绑定, 自动为您跳过身份验证.</div>
+                    {% endif %}
+                {% else %}
+                    <div class="step-skip">默认策略, 自动为您跳过身份验证.</div>
+                {% endif %}
+            </div>
+            <div class="step-panel" title="<span class='badge color-darkblue'>2</span> 修改邮箱">
+                <div class="form-group">
+                {% if request.user.email %}
+                <div class="lf form-label"> 原邮箱 : </div>
+                <div class="lf form-input">{{ request.user.email|hide_email }}</div>
+                {% endif %}
+                <div class="clear"></div>
+                <div class="lf form-label"><span class="font-red">*</span> 新邮箱 : </div>
+                <div class="lf form-input">
+                    <input id="email" name="email" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+                <div class="clear"></div>
+                <div class="lf form-label"><span class="font-red">*</span> 验证码 : </div>
+                <div class="lf form-input">
+                    <input id="checkcode" name="checkcode" class="easyui-textbox" value="" prompt="6位数字" data-options="width:'256',height:'32'">
+                    <a id="send_code" href="#" class="easyui-linkbutton no-border-radius" data-options="width:'122',height:'32'">获取邮箱验证码</a>
+                </div>
+                <div class="clear"></div>
+            </div>
+            </div>
+            <div class="step-panel" title="<span class='badge color-darkblue'>2</span> 完成修改">
+                <div class="step-skip">
+                    <i class="fa fa-check-circle font-green">
+                        已成功修改密保邮箱, 点击 <a href="#" class="gosecurity link-underline">返回</a>
+                    </i>
+                </div>
+            </div>
+        </div>
+        <div class="page-foot">
+            <div class="operation rt">
+                <a id="next_step" href="#" class="easyui-linkbutton no-border-radius" width=58 height=32>提交</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var user_id = "{{ request.user.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,usermail = "{{ request.user.email }}"
+        ,username = "{{ request.user.username }}"
+        ,security_href = "{% url 'xm2cloud_auth:profile_security'%}"
+        ,verify_mfa_api = "{% url 'xm2cloud_auth:api_verify_mfa' %}"
+        ,verify_email_api = "{% url 'xm2cloud_auth:api_verify_email' %}"
+        ,verify_phone_api = "{% url 'xm2cloud_auth:api_verify_phone' %}"
+        ,email_identify_api = "{% url 'xm2cloud_auth:api_email_identify' %}"
+        ,phone_identify_api = "{% url 'xm2cloud_auth:api_phone_identify' %}"
+        ,email_code_send_api = "{% url 'xm2cloud_auth:api_email_code_send' %}"
+        ,phone_code_send_api = "{% url 'xm2cloud_auth:api_phone_code_send' %}"
+        ,user_update_api = "{% url 'xm2cloud_auth:api_user_update' id=0 %}";
+
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        $('.gosecurity').on('click', function () {$._control('#control', {href: security_href})});
+        $('#step_tabs').tabs({onSelect: function () {$(this).find('ul.tabs li.tabs-selected').removeClass('tabs-disabled').siblings().addClass('tabs-disabled');}});
+        $('#send_code').linkbutton({
+            onClick: function () {
+                var _html
+                    ,_load
+                    ,that = this
+                    ,email = $('#email').textbox('getValue');
+
+                if(!_html) _html = $(that).find('span:last').html();
+                _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+
+                // may be you need valid email first
+                $._ajax({
+                    url: email_code_send_api,
+                    error_width: 501,
+                    data: {email: email},
+                    beforeSend: function () {
+                        $(that).find('span:last').html(_load);
+                    },
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#next_step').linkbutton({
+            onClick: function () {
+                var _html
+                    ,_load
+                    ,that = this
+                    ,steps = $('#step_tabs')
+                    ,email = $('#email').textbox('getValue')
+                    ,checkcode = $('#checkcode').textbox('getValue');
+                
+                if(!_html) _html = $(that).find('span:last').html();
+                _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+
+                var tid = steps.tabs('getTabIndex', steps.tabs('getSelected'));
+                switch (tid){
+                    case 0:
+                        var inputs = $('input.checkcode');
+                        if(inputs.length >0){
+                            checkcode = inputs.first().val();
+                            var options = {
+                                    error_width: 501,
+                                    beforeSend: function () {
+                                        $(that).find('span:last').html(_load);
+                                    },
+                                    success: function (data) {
+                                        console.log(location.href+':'+data);
+                                        // location.href = data.next;
+                                        steps.tabs('select', tid + 1);
+                                    },
+                                    complete: function () {
+                                        $(that).find('span:last').html(_html);
+                                    },
+                                    data: {checkcode: checkcode}
+                                }
+                                ,method = inputs.first().attr('method');
+                            switch (method){
+                                case 'email':
+                                    options.url = verify_email_api;
+                                    break;
+                                case 'phone':
+                                    options.url = verify_phone_api;
+                                    break;
+                                case 'mfa':
+                                    options.url = verify_mfa_api;
+                            }
+                            $._ajax(options);
+                        }else{
+                            steps.tabs('select', tid + 1);
+                        }
+                        break;
+                    case 1:
+                        var user_update_url = user_update_api.replace('/0/', '/'+user_id+'/');
+                        $._ajax({
+                            url: user_update_url,
+                            error_width: 501,
+                            beforeSend: function () {
+                                $(that).find('span:last').html(_load);
+                            },
+                            success: function (data) {
+                                console.log(location.href+':'+data);
+                                // location.href = data.next;
+                                steps.tabs('select', tid + 1);
+                            },
+                            complete: function () {
+                                $(that).find('span:last').html(_html);
+                            },
+                            data: {email: email, username: username, checkcode: checkcode}
+                        });
+                        break;
+                    case 2:
+                        steps.tabs('select', tid + 1);
+                        break;
+                    default:
+                        $(this).linkbutton('disable');
+                        break;
+                }
+            }
+        });
+        $('input.checkcode').first().next('a').linkbutton({
+            onClick: function () {
+                var _html
+                    ,_load
+                    ,that = this
+                    ,method = $(this).attr('method');
+
+                if(!_html) _html = $(that).find('span:last').html();
+                _load =  '<i class="fa fa-circle-o-notch fa-spin"></i>'+' '+_html;
+
+                var options = {
+                    error_width: 501,
+                    beforeSend: function () {
+                        $(that).find('span:last').html(_load);
+                    },
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                };
+                switch (method){
+                    case 'email':
+                        options.url = email_identify_api;
+                        break;
+                    case 'phone':
+                        options.url = phone_identify_api;
+                        break;
+                }
+                // may be you need valid email first
+                $._ajax(options);
+            }
+        });
+    })
+</script>

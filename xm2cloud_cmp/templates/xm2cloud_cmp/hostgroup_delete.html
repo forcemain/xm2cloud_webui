@@ -1,0 +1,107 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认删除 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">{{ object.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">{{ object.notes }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">创建时间 : </div>
+                <div class="lf form-input">{{ object.create_time|date:'Y-m-d H:i:s' }}</div>
+            </div>
+            <div class="clear"></div>
+            {% if object.alertcontactgroup %}
+                <div class="form-group">
+                    <div class="lf form-label">关联通知 : </div>
+                    <div class="lf form-input">
+                        <a href="#" target="_blank" class="link-underline">{{ object.alertcontactgroup }}</a>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联集群 : </div>
+                <div class="lf form-input">
+                    <a href="{% url 'xm2cloud_cmp:cluster_manage' %}?clusterId={{ object.cluster.pk }}" target="_blank" class="link-underline">{{ object.cluster }}</a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            {% if object.hostgroup_set.exists %}
+                <div class="form-group">
+                    <div class="lf form-label">关联主机 : </div>
+                    <div class="lf form-input">
+                        <a href="#" target="_blank" class="link-underline">{{ object.host_set.count }} 个</a>
+                    </div>
+                </div>
+                <div class="clear"></div>
+            {% endif %}
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_hostgroup" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="delete_hostgroup" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,hostgroup_list = "{% url 'xm2cloud_cmp:hostgroups' %}"
+        ,hostgroup_delete_api = "{% url 'xm2cloud_cmp:api_hostgroup_delete' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#delete_hostgroup').linkbutton({
+            onClick: function () {
+                var that = this;
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var hostgroup_delete_url = hostgroup_delete_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: hostgroup_delete_url,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: hostgroup_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#goback_hostgroup').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: hostgroup_list});
+            }
+        });
+    })
+</script>
