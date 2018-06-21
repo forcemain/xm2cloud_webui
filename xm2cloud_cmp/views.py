@@ -1361,7 +1361,6 @@ class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
 
         if reqtaskstate == 1000:
             return context
-
         object_list = QuerySetProxy([])
         for obj in context['object_list']:
             rsptaskstate = obj.task_state()

@@ -103,7 +103,7 @@ DATABASES = {
         'NAME': 'xm2cloud_ops_test',
         'USER': 'root',
         'PASSWORD': 'z6A1kaff8X4UbsjpwxseMVtWerMxiAok',
-        'HOST': 'ops.xxoo.com',
+        'HOST': 'ops.xm020.com',
         'PORT': 3306,
     }
 }
@@ -187,7 +187,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 CHANNEL_RABBITMQ_SSL = False
 CHANNEL_RABBITMQ_PORT = 5672
 CHANNEL_RABBITMQ_ROUTING_KEY = '#'
-CHANNEL_RABBITMQ_HOST = 'ops.xxoo.com'
+CHANNEL_RABBITMQ_HOST = 'ops.xm020.com'
 CHANNEL_RABBITMQ_VHOST = '/event_engine'
 CHANNEL_RABBITMQ_EXCHANGE_TYPE = 'topic'
 CHANNEL_RABBITMQ_UP_QUEUE = 'event_up_queue'
@@ -203,7 +203,7 @@ BACKEND_OPENTSDB_PORT = 4242
 BACKEND_OPENTSDB_PROTOCOL = 'http'
 BACKEND_OPENTSDB_USERNAME = ''
 BACKEND_OPENTSDB_PASSWORD = ''
-BACKEND_OPENTSDB_HOST = 'ops.xxoo.com'
+BACKEND_OPENTSDB_HOST = 'ops.xm020.com'
 
 
 # Celery settings
@@ -219,9 +219,9 @@ CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24 * 7
 
 CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 
-CELERY_RESULT_BACKEND = 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/1'
+CELERY_RESULT_BACKEND = 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/1'
 
-BROKER_URL = 'amqp://celery_engine_user:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:5672//celery_engine'
+BROKER_URL = 'amqp://celery_engine_user:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:5672//celery_engine'
 
 
 # Channel settings
@@ -229,7 +229,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'asgi_redis.RedisChannelLayer',
         'CONFIG': {
-            'hosts': ['redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/3'],
+            'hosts': ['redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/3'],
         },
         'ROUTING': 'xm2cloud_term.routing.channel_routing'
     }
@@ -240,19 +240,19 @@ CHANNEL_LAYERS = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/0'
+        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/0'
     },
     'celery': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/1'
+        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/1'
     },
     'session': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/2'
+        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/2'
     },
     'channel': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xxoo.com:6379/3'
+        'LOCATION': 'redis://:z6A1kaff8X4UbsjpwxseMVtWerMxiAok@ops.xm020.com:6379/3'
     }
 }
 
