@@ -1,0 +1,118 @@
+{% load static %}
+
+<table id="script_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+<div id="script_contents" class="easyui-window" closed="true" title="脚本内容"></div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ace.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,script_manage = "{% url 'xm2cloud_cmp:script_manage' %}"
+        ,script_execute = "{% url 'xm2cloud_cmp:script_execute' %}"
+        ,script_list_api = "{% url 'xm2cloud_cmp:api_script_list' %}"
+        ,script_detail = "{% url 'xm2cloud_cmp:script_detail' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['scriptSearch'] = $('#script_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $._datagrid('#script_datagrid', {
+            url: script_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_script_'+item.id;
+                    var mt_id = '#mt_script_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'script_detail':
+                                var eid = 'editor_'+item.id;
+                                var content = '<pre id="' + eid + '" class="ace_editor" style="min-height:350px">'
+                                            + '<textarea class="ace_text-input">' + item.contents
+                                            + '</textarea></pre>';
+                                $._window('#script_contents', {
+                                    width: '55%',
+                                    height: 380,
+                                    content: content,
+                                    maximizable: true,
+                                    onResize: function (width, height) {
+                                        $(this).window('center');
+                                        $('#'+eid).css('minHeight', height-30);
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            contents: item.contents,
+                                            language: item.interpreter
+                                        }).resize();
+                                    },
+                                    onOpen: function () {
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            contents: item.contents,
+                                            language: item.interpreter
+                                        })
+                                    }
+                                });
+
+                                break;
+                            case 'execute_script':
+                                location.href = script_execute+'?scriptId='+item.id;
+                                break;
+                        }
+                    });
+                });
+                $('.script-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'name',width:'20%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = script_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="script-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'scriptgroup',width:'15%',title:'群组',sortable:true,
+                    formatter: function(value, row, index){
+                        return value || 'N/A';
+                    }
+                },
+                {
+                    field:'platform',width:'5%',title:'平台',sortable:true
+                },
+                {
+                    field:'interpreter',width:'5%',title:'语言',sortable:true
+                },
+                {
+                    field:'notes',width:'25%',title:'备注'
+                },
+                {
+                    field:'update_time',width:'10%',title:'上次修改',sortable:true
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_script_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_script_'+row.id+'" style="display: none;">'
+                                  + '<div _t="script_detail" class="menu-more">查看脚本</div>'
+                                  + '<div _t="execute_script" class="menu-more">执行脚本</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

@@ -39,7 +39,7 @@ $._ajax = function (options) {
                     + '</div>';
         $._message(options);
     };
-    console.log(options);
+
     $.ajax(options);
 };
 

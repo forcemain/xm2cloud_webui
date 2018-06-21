@@ -42,6 +42,16 @@
             </div>
             <div class="clear"></div>
             <div class="form-group">
+                <div class="lf form-label">付费方式 : </div>
+                <div class="lf form-input">
+                    <select id="bill_method" name="bill_method" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
+                        <option value="0">包年/包月</option>
+                        <option value="1">流量/计算</option>
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
                 <div class="lf form-label">关联系统 : </div>
                 <div class="lf form-input">
                     <select id="vmos" name="vmos" class="easyui-combobox" value="" data-options="width:'380',height:'32'">
@@ -297,6 +307,7 @@
                     ,notes = $('#notes').textbox('getValue')
                     ,vmcpu = $('#vmcpu').textbox('getValue')
                     ,vmmem = $('#vmmem').textbox('getValue')
+                    ,bill_method = $('#bill_method').combobox('getValue')
                     ,oems = $('#oem_right_select').find('option').map(function(){return $(this).val()}).get()
                     ,ipline_set = $('#ipline_right_select').find('option').map(function(){return $(this).val()}).get()
                     ,hostgroups = $('#hostgroup_right_select').find('option').map(function(){return $(this).val()}).get();
@@ -319,7 +330,7 @@
                     },
                     data: {
                         name: name, vmos: vmos, area: area, firm: firm, notes: notes, vmcpu: vmcpu, vmmem: vmmem,
-                        oems: oems, ipline_set: ipline_set, hostgroups: hostgroups
+                        oems: oems, ipline_set: ipline_set, hostgroups: hostgroups, bill_method: bill_method
                     }
                 })
             }

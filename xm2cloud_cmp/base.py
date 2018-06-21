@@ -65,3 +65,4 @@ class JSONUpdateView(JSONResponseMixin, UpdateView):
         data = {'next': self.get_success_url()}
 
         return JsonResponse(data, status=200)
+

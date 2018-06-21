@@ -30,7 +30,7 @@ class Profile(db_models.Model):
     mfa_gotp_qurls = db_models.CharField(max_length=255, default='', blank=True)
     update_time = db_models.DateTimeField(auto_now_add=True, blank=True)
     create_time = db_models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
-    id = db_models.UUIDField(primary_key=True, auto_created=True, default=uuid.uuid4, editable=False)
+    id = db_models.CharField(max_length=36, primary_key=True, auto_created=True, default=uuid.uuid4, editable=False)
     avatar = StrictedImageFileField(upload_to=generate_filename('avatars'), sizes=((99, 99),), blank=True)
     operate_protect_intensity = db_models.CharField(max_length=32,
                                                     choices=[('default', 'default'), ('force', 'force')],

@@ -11,6 +11,10 @@ class IpLineAdmin(admin.ModelAdmin):
     search_fields = ['ip', 'notes']
 
 
+class ScriptAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
 class OemInfoAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
@@ -32,6 +36,18 @@ class HostGroupAdmin(admin.ModelAdmin):
 
 
 class ContinentAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class ScriptLogAdmin(admin.ModelAdmin):
+    pass
+
+
+class TimedTaskAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class ScriptGroupAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
 
@@ -72,12 +88,16 @@ class DashBoardScreenTargetAdmin(admin.ModelAdmin):
 
 
 admin.site.register(models.Host, HostAdmin)
+admin.site.register(models.Script, ScriptAdmin)
 admin.site.register(models.IpLine, IpLineAdmin)
 admin.site.register(models.Region, RegionAdmin)
 admin.site.register(models.Cluster, ClusterAdmin)
 admin.site.register(models.OemInfo, OemInfoAdmin)
+admin.site.register(models.ScriptLog, ScriptLogAdmin)
 admin.site.register(models.HostGroup, HostGroupAdmin)
 admin.site.register(models.Continent, ContinentAdmin)
+admin.site.register(models.TimedTask, TimedTaskAdmin)
+admin.site.register(models.ScriptGroup, ScriptGroupAdmin)
 admin.site.register(models.AlertContact, AlertContactAdmin)
 admin.site.register(models.Manufacturer, ManufacturerAdmin)
 admin.site.register(models.IpLinePackage, IpLinePackageAdmin)

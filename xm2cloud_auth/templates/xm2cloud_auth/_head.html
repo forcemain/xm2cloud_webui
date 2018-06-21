@@ -23,10 +23,10 @@
             <li class="dropdown-menu" _t="script_task">
                 <a href="#">脚本任务 <i class="fa fa-angle-down"></i></a>
                 <div id="script_task" class="easyui-menu">
-                    <div><a href="#">脚本列表</a></div>
-                    <div><a href="#">执行脚本</a></div>
-                    <div><a href="#">执行记录</a></div>
-                    <div><a href="#">定时任务</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:script_manage' %}">脚本列表</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:script_execute' %}">执行脚本</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:script_log_manage' %}">执行记录</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:timedtask_manage' %}">定时任务</a></div>
                 </div>
             </li>
             <li class="dropdown-menu" _t="sched_plan">

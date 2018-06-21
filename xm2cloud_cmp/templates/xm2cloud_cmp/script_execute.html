@@ -1,0 +1,282 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <style type="text/css">
+        #script_editor {
+            min-height: 550px;
+        }
+    </style>
+{% endblock %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-tool" region="north" title="<a class='link-underline'>脚本执行</a>" split="false"
+                 border="false" collapsible="false">
+                <div class="nav-tool-container">
+                    <div class="lf left-tools">
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="cluster_select" name="cluster" class="easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="集群: " required="true"
+                                        missingMessage="" invalidMessage="" style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="hostgroup_select" name="hostgroup" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="群组: " style="width:602px">
+                                </select>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="select-group-split">
+                        </div>
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="host_select" name="host" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="主机: " style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="platform_select" class="select-item easyui-combobox" label="平台: "
+                                        prompt="--请选择--" disabled="true" style="width:300px">
+                                    <option value="linux">linux</option>
+                                    <option value="windows">windows</option>
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="interpreter_select" class="select-item easyui-combobox" label="语言: "
+                                        prompt="--请选择--" disabled="true" style="width:300px">
+                                    <option value="sh">sh</option>
+                                    <option value="python">python</option>
+                                    <option value="ruby">ruby</option>
+                                    <option value="perl">perl</option>
+                                </select>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="select-group-split"></div>
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="script_select" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="脚本: " style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <input id="script_timeout" class="easyui-textbox" prompt="--单位秒--" label="超时: "
+                                       value="{% if script %}{{ script.timeout }}{% else %}300{% endif %}" style="width:150px">
+                            </div>
+                            <div class="lf select-item">
+                                <input id="script_execute" class="easyui-textbox" prompt="运行参数" buttonText="提交"
+                                       value="{% if script %}{{ script.parameters }}{% endif %}" style="width:450px">
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+                    <div class="rt right-tools">
+                        <div id="execute_state" class="execute_state">
+                            <i class="fa fa-circle-o-notch font-green"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control">
+                <div class="nav-page-container">
+                    <div class="editor-area">
+                        <pre id="script_editor" class="ace_editor"><textarea class="ace_text-input">{% if script %}{{ script.contents }}{% endif %}</textarea></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+    <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ace.js' %}"></script>
+    <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ext-language_tools.js' %}"></script>
+    <script type="text/javascript">
+        var host_id = "{{ host.pk }}"
+            ,script_id = "{{ script.pk }}"
+            ,cluster_id = "{{ cluster.pk }}"
+            ,hostgroup_id = "{{ hostgroup.pk }}"
+            ,ajax_csrf_token = "{{ csrf_token }}"
+            ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+            ,script_interpreter = "{{ script.interpreter|default:'sh' }}"
+            ,script_list_api = "{% url 'xm2cloud_cmp:api_script_list' %}"
+            ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+            ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
+            ,api_script_log_create = "{% url 'xm2cloud_cmp:api_script_log_create' %}";
+
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+        $(function () {
+            var e = $._editor('script_editor', {
+                language: script_interpreter
+            });
+            var host_select = $('#host_select')
+                ,execute_state = $('#execute_state')
+                ,script_select = $('#script_select')
+                ,cluster_select = $('#cluster_select')
+                ,script_timeout = $('#script_timeout')
+                ,script_execute = $('#script_execute')
+                ,platform_select = $('#platform_select')
+                ,hostgroup_select = $('#hostgroup_select')
+                ,interpreter_select = $('#interpreter_select');
+            $._ajax({
+                type: 'GET',
+                url: cluster_list_api,
+                traditional: true,
+                error_width: 501,
+                beforeSend: function (XHR) {
+                },
+                success: function (data) {
+                    $._combobox('#cluster_select', {
+                        disabled: false,
+                        onSelect: function (record) {
+                            hostgroup_select.combobox('clear');
+                            cluster_id = record.id;
+                            $._ajax({
+                                type: 'GET',
+                                url: hostgroup_list_api+'?clusterId='+cluster_id,
+                                traditional: true,
+                                error_width: 501,
+                                beforeSend: function (XHR) {
+                                },
+                                success: function (data) {
+                                    $._combobox('#hostgroup_select', {
+                                        disabled: false,
+                                        onSelect: function (record) {
+                                            host_select.combobox('clear');
+                                            hostgroup_id = record.id;
+                                            $._ajax({
+                                                type: 'GET',
+                                                url: host_list_api + '?hostgroupId=' + hostgroup_id,
+                                                traditional: true,
+                                                error_width: 501,
+                                                beforeSend: function (XHR) {
+                                                },
+                                                success: function (data){
+                                                    $._combobox('#host_select', {
+                                                        disabled: false,
+                                                        formatter: function (row) {
+                                                            return row.name;
+                                                        },
+                                                        onLoadSuccess: function (){
+                                                            $(this).combobox('select', host_id);
+                                                        }
+                                                    });
+                                                    host_select.combobox('loadData', data.rows);
+                                                },
+                                                complete: function () {
+                                                }
+                                            })
+                                        },
+                                        onLoadSuccess: function (){
+                                            $(this).combobox('select', hostgroup_id);
+                                        }
+
+                                    });
+                                    hostgroup_select.combobox('loadData', data.rows);
+                                },
+                                complete: function () {
+                                }
+                            })
+                        },
+                        onLoadSuccess: function (){
+                            $._ajax({
+                                type: 'GET',
+                                url: script_list_api,
+                                traditional: true,
+                                error_width: 501,
+                                beforeSend: function (XHR) {
+                                },
+                                success: function (data){
+                                    $._combobox('#platform_select', {
+                                        disabled: false,
+                                        formatter: function (row) {
+                                            return row.name;
+                                        }
+                                    });
+                                    $._combobox('#interpreter_select', {
+                                        disabled: false,
+                                        formatter: function (row) {
+                                            return row.name;
+                                        }
+                                    });
+                                    $._combobox('#script_select', {
+                                        disabled: false,
+                                        onSelect: function (record) {
+                                            platform_select.combobox('select', record.platform);
+                                            interpreter_select.combobox('select', record.interpreter);
+                                            e = $._editor('script_editor', {
+                                                contents: record.contents,
+                                                language: record.interpreter
+                                            });
+                                        },
+                                        onLoadSuccess: function () {
+                                            $(this).combobox('select', script_id);
+                                        }
+                                    });
+                                    script_select.combobox('loadData', data.rows);
+                                },
+                                complete: function () {
+                                }
+                            })
+                        }
+                    });
+                    cluster_select.combobox('loadData', data.rows);
+                },
+                complete: function () {
+                }
+            });
+
+            script_execute.textbox({
+                onClickButton: function () {
+                    var triggermode = 0
+                        ,user_script = e.getValue()
+                        ,state = execute_state.html()
+                        ,host = host_select.combobox('getValue')
+                        ,script = script_select.combobox('getValue')
+                        ,timeout = script_timeout.textbox('getValue')
+                        ,cluster = cluster_select.combobox('getValue')
+                        ,platform = platform_select.combobox('getValue')
+                        ,parameters = script_execute.textbox('getValue')
+                        ,hostgroup = hostgroup_select.combobox('getValue')
+                        ,interpreter = interpreter_select.combobox('getValue');
+                    $._ajax({
+                        type: 'POST',
+                        url: api_script_log_create,
+                        traditional: true,
+                        error_width: 501,
+                        beforeSend: function (XHR) {
+                            execute_state.html('<i class="fa fa-circle-o-notch fa-spin font-orange"></i>');
+                        },
+                        success: function (data){
+                            execute_state.html(state);
+                            console.log(location.href+':'+data);
+                            location.href = data.next;
+                        },
+                        complete: function () {
+                            execute_state.html(state);
+                        },
+                        data: {
+                            triggermode: triggermode, host: host, script: script, cluster: cluster,
+                            hostgroup: hostgroup, user_script: user_script, run_timeout: timeout,
+                            run_parameters: parameters, run_interpreter: interpreter, run_platform: platform
+                        }
+                    })
+                }
+            });
+        })
+    </script>
+{% endblock %}

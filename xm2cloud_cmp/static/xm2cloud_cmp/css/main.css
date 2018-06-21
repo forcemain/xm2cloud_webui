@@ -22,6 +22,12 @@
 .link:hover {
     border-bottom: dotted 1px #039;
 }
+.script-results {
+    padding: 10px;
+}
+.script-results p {
+    line-height: 20px;
+}
 .link-underline {
     border-bottom: dotted 1px #039;
 }
@@ -373,4 +379,70 @@
 }
 .body-container .nav-tool .left-tools, .body-container .nav-tool .right-tools {
     padding: 10px 0;
+}
+
+.body-container .nav-page .nav-page-container .page-body .list-detail {
+    border-top: solid 1px #eeeeee;
+}
+.body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col {
+    width: 49%;
+    float: left;
+}
+.body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col dl {
+    line-height: 35px;
+}
+.body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col dl:before,
+.body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col dl:after {
+    display: table;
+    content: ' ';
+}
+.body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col dl dt {
+    width: 64px;
+    float: left;
+    color: #999;
+    text-align: left;
+}
+.body-container .nav-page .nav-page-container .page-body .detail-tabs {
+    min-height: 600px;
+}
+.body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-tool {
+    padding-top: 10px;
+}
+.body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-data .chart {
+    width: 49%;
+    height: 300px;
+    padding: 10px;
+    margin: 10px 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    border: solid 1px #eeeeee;
+}
+.body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-data .chart .chart-tool {
+    color: #999;
+}
+.body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-data .chart .chart-data {
+    width: 100%;
+    height: 100%;
+}
+
+.body-container .nav-tool .right-tools .execute_state {
+    width: 90px;
+    height: 90px;
+    line-height: 90px;
+    text-align: center;
+    border: solid 1px #ddd;
+}
+.body-container .nav-tool .right-tools .execute_state {
+    font-size: 32px;
+    font-weight: 300;
+}
+.body-container .nav-tool .left-tools .select-group-split {
+    padding: 5px;
+}
+.body-container .nav-tool .left-tools .select-group .select-item {
+    margin-right: 2px;
+}
+.body-container .nav-page .nav-page-container .editor-area {
+    border: solid 1px #ddd;
 }

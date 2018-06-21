@@ -17,7 +17,7 @@ class Identification(models.Model):
     notes = models.CharField(max_length=255, default='', blank=True)
     authpass = models.CharField(max_length=32, default='', blank=True)
     create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
-    id = models.UUIDField(primary_key=True, auto_created=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=uuid.uuid4, editable=False)
     authtype = models.CharField(max_length=16, choices=[('password', 'password'), ('authfile', 'authfile')],
                                 default='password')
     protocol = models.CharField(max_length=32, default='ssh',

@@ -1,0 +1,135 @@
+{% load static %}
+
+<table id="timedtask_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,script_manage = "{% url 'xm2cloud_cmp:script_manage' %}"
+        ,timedtask_list_api = "{% url 'xm2cloud_cmp:api_timedtask_list' %}"
+        ,timedtask_detail = "{% url 'xm2cloud_cmp:timedtask_detail' slug=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['timedtaskSearch'] = $('#timedtask_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $._datagrid('#timedtask_datagrid', {
+            url: timedtask_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_timedtask_'+item.sevent_uuid;
+                    var mt_id = '#mt_timedtask_'+item.sevent_uuid;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'execute_logs':
+                                alert('执行日志: '+item.sevent_uuid);
+                                break;
+                        }
+                    });
+                });
+
+                $('.timedtask-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'name',width:'18%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = timedtask_detail.replace('/0/', '/'+row.sevent_uuid+'/');
+                        return '<a _t="'+_t+'" class="timedtask-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'script',width:'15%',title:'脚本',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = script_manage+'scriptId='+row.script_id;
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+row.script_name+'</a>';
+                    }
+                },
+                {
+                    field:'policy',width:'15%',title:'策略',
+                    formatter: function(value, row, index){
+                        var policy = 'N/A';
+                        if(row.interval_id){
+                            policy = '每 '+row.interval_every;
+                            switch (row.interval_period){
+                                case 'days':
+                                    policy += ' 天';
+                                    break;
+                                case 'hours':
+                                    policy += ' 小时';
+                                    break;
+                                case 'minutes':
+                                    policy += ' 分钟';
+                                    break;
+                                case 'seconds':
+                                    policy += ' 秒';
+                                    break;
+                                case 'microseconds':
+                                    policy += ' 毫秒';
+                                    break;
+                            }
+                        }
+                        if(row.crontab_id){
+                            policy = (row.crontab_minute?row.crontab_minute:'')
+                                   + (row.crontab_hour?(' '+row.crontab_hour):'')
+                                   + (row.crontab_day_of_week?(' '+row.crontab_day_of_week):'')
+                                   + (row.crontab_day_of_month?(' '+row.crontab_day_of_month):'')
+                                   + (row.crontab_month_of_year?(' '+row.crontab_month_of_year):'');
+                        }
+
+                        return policy;
+                    }
+                },
+                {
+                    field:'target',width:'20%',title:'执行目标',
+                    formatter: function(value, row, index){
+                        console.log(row);
+                        var target = '';
+                        target = (row.cluster_name?row.cluster_name:'')
+                               + (row.hostgroup_name?('/'+row.hostgroup_name):'')
+                               + (row.host_name?('/'+row.host_name):'');
+                        return target;
+                    }
+                },
+                {
+                    field:'last_run_at',width:'10%',title:'最近执行',
+                    formatter: function(value, row, index){
+                        return value && value || 'N/A';
+                    }
+                },
+                {
+                    field:'enabled',width:'2%',title:'启用',
+                    formatter: function(value, row, index){
+                        if(!value){
+                            return '<a href="#" class="font-red">否</a>';
+                        }else{
+                            return '<a href="#" class="font-green">是</a>';
+                        }
+                    }
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_timedtask_'+row.sevent_uuid+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_timedtask_'+row.sevent_uuid+'" style="display: none;">'
+                                  + '<div _t="execute_logs" class="menu-more">执行记录</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

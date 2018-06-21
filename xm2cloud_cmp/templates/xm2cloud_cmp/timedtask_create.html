@@ -1,0 +1,248 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认新增 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">
+                    <input id="name_set" name="name_set" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes_set" name="notes_set" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联脚本 : </div>
+                <div class="lf form-input">
+                    <select id="script_select" name="script_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" required="true" missingMessage="" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">周期计划 : </div>
+                <div class="lf form-input">
+                    <select id="crontab_select" name="crontab_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'347',height:'32'">
+                    </select>
+                    <a href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-plus"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">定时计划 : </div>
+                <div class="lf form-input">
+                    <select id="interval_select" name="interval_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'347',height:'32'">
+                    </select>
+                    <a href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-plus"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联集群 : </div>
+                <div class="lf form-input">
+                    <select id="cluster_select" name="cluster_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" required="true" missingMessage="" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联群组 : </div>
+                <div class="lf form-input">
+                    <select id="hostgroup_select" name="hostgroup_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联主机 : </div>
+                <div class="lf form-input">
+                    <select id="host_select" name="host_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="create_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}"
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,script_list_api = "{% url 'xm2cloud_cmp:api_script_list' %}"
+        ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+        ,crontab_list_api = "{% url 'xm2cloud_cmp:api_crontab_list' %}"
+        ,interval_list_api = "{% url 'xm2cloud_cmp:api_interval_list' %}"
+        ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
+        ,timedtask_create_api = "{% url 'xm2cloud_cmp:api_timedtask_create'%}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        var name_set = $('#name_set')
+            ,notes_set = $('#notes_set')
+            ,host_select = $('#host_select')
+            ,script_select = $('#script_select')
+            ,cluster_select = $('#cluster_select')
+            ,crontab_select = $('#crontab_select')
+            ,interval_select = $('#interval_select')
+            ,hostgroup_select = $('#hostgroup_select')
+            ,create_timedtask = $('#create_timedtask');
+        $._ajax({
+            type: 'GET',
+            url: script_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#script_select', {
+                    disabled: false
+                });
+                script_select.combobox('loadData', data.rows);
+            },
+            complete: function () {
+            }
+        });
+        $._ajax({
+            type: 'GET',
+            url: cluster_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#cluster_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        hostgroup_select.combobox('clear');
+                        $._ajax({
+                            type: 'GET',
+                            url: hostgroup_list_api+'?clusterId='+record.id,
+                            traditional: true,
+                            error_width: 501,
+                            beforeSend: function (XHR) {
+                            },
+                            success: function (data) {
+                                $._combobox('#hostgroup_select', {
+                                    disabled: false,
+                                    onSelect: function (record) {
+                                        host_select.combobox('clear');
+                                        $._ajax({
+                                            type: 'GET',
+                                            url: host_list_api + '?hostgroupId=' + record.id,
+                                            traditional: true,
+                                            error_width: 501,
+                                            beforeSend: function (XHR) {
+                                            },
+                                            success: function (data){
+                                                $._combobox('#host_select', {
+                                                    disabled: false,
+                                                    formatter: function (row) {
+                                                        return row.name;
+                                                    },
+                                                    onLoadSuccess: function (){
+                                                    }
+                                                });
+                                                host_select.combobox('loadData', data.rows);
+                                            },
+                                            complete: function () {
+                                            }
+                                        })
+                                    },
+                                    onLoadSuccess: function (){
+                                    }
+                                });
+                                hostgroup_select.combobox('loadData', data.rows);
+                            },
+                            complete: function () {
+                            }
+                        })
+                    },
+                    onLoadSuccess: function () {
+                    }
+                });
+                cluster_select.combobox('loadData', data.rows);
+            },
+            complete: function () {
+            }
+        });
+        create_timedtask.linkbutton({
+            onClick: function () {
+                var that = this
+                    ,name = $('#name').textbox('getValue')
+                    ,host = $('#host').combobox('getValue')
+                    ,notes = $('#notes').textbox('getValue')
+                    ,script = $('#script').combobox('getValue')
+                    ,cluster = $('#cluster').combobox('getValue')
+                    ,crontab = $('#crontab').combobox('getValue')
+                    ,interval = $('#interval').combobox('getValue')
+                    ,hostgroup = $('#hostgroup').combobox('getValue');
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                $._ajax({
+                    url: timedtask_create_api,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: timedtask_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        name: name, host: host, notes: notes, script: script, cluster: cluster, crontab: crontab,
+                        interval: interval, hostgroup: hostgroup
+                    }
+                })
+            }
+        });
+        $('#goback_timedtask').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: timedtask_list});
+            }
+        });
+    })
+</script>

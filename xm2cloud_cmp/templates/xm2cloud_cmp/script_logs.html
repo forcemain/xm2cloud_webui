@@ -1,0 +1,247 @@
+{% load static %}
+
+<table id="script_log_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+<div id="script_contents" class="easyui-window" closed="true" title="脚本内容"></div>
+<div id="execute_results" class="easyui-window" closed="true" title="执行结果"></div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ace.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ext-language_tools.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,script_logs = "{% url 'xm2cloud_cmp:script_logs' %}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,script_manage = "{% url 'xm2cloud_cmp:script_manage' %}"
+        ,cluster_manage = "{% url 'xm2cloud_cmp:cluster_manage' %}"
+        ,hostgroup_manage = "{% url 'xm2cloud_cmp:hostgroup_manage' %}"
+        ,script_log_list_api = "{% url 'xm2cloud_cmp:api_script_log_list' %}"
+        ,script_log_result_api = "{% url 'xm2cloud_cmp:api_script_log_result' %}"
+        ,script_log_create_api = "{% url 'xm2cloud_cmp:api_script_log_create' %}"
+        ,script_log_delete_api = "{% url 'xm2cloud_cmp:api_script_log_delete' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param()
+            ,hostid = $('#host_select').combobox('getValue')
+            ,scriptid = $('#script_select').combobox('getValue')
+            ,clusterid = $('#cluster_select').combobox('getValue')
+            ,task_state = $('#task_state_select').combobox('getValue')
+            ,hostgroupid = $('#hostgroup_select').combobox('getValue')
+            ,triggermode = $('#triggermode_select').combobox('getValue');
+
+        if(hostid) params['hostId'] = hostid;
+        if(scriptid) params['scriptId'] = scriptid;
+        if(clusterid) params['clusterId'] = clusterid;
+        if(task_state) params['taskState'] = task_state;
+        if(triggermode) params['triggerMode'] = triggermode;
+        if(hostgroupid) params['hostgroupId'] = hostgroupid;
+
+        return params;
+    }
+
+    $(function () {
+        $._datagrid('#script_log_datagrid', {
+            url: script_log_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_script_log_'+item.id;
+                    var mt_id = '#mt_script_log_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var eid
+                            ,content
+                            ,_t = $(this).attr('_t')
+                            ,execute_state =  $('#execute_state');
+                        switch(_t){
+                            case 'delete_results':
+                                var state = execute_state.html()
+                                    ,script_log_delete_url = script_log_delete_api.replace('/0/', '/' + item.id + '/');
+                                $._ajax({
+                                    url: script_log_delete_url,
+                                    error_width: 501,
+                                    beforeSend: function (XHR) {
+                                        execute_state.html('<i class="fa fa-circle-o-notch fa-spin font-orange"></i>');
+                                    },
+                                    success: function (data) {
+                                        console.log(location.href+':'+data);
+                                        $._control('#control', {href: script_logs});
+                                    },
+                                    complete: function () {
+                                        execute_state.html(state);
+                                    }
+                                });
+                                break;
+                            case 'script_contents':
+                                eid = 'editor_script_contents_'+item.id;
+                                content = '<pre id="' + eid + '" class="ace_editor" style="min-height:350px">'
+                                        + '<textarea class="ace_text-input">' + item.user_script
+                                        + '</textarea></pre>';
+                                $._window('#script_contents', {
+                                    width: '55%',
+                                    height: 380,
+                                    content: content,
+                                    maximizable: true,
+                                    onResize: function (width, height) {
+                                        $(this).window('center');
+                                        $('#'+eid).css('minHeight', height-30);
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            contents: item.user_script,
+                                            language: item.run_interpreter
+                                        }).resize();
+                                    },
+                                    onOpen: function () {
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            contents: item.user_script,
+                                            language: item.run_interpreter
+                                        })
+                                    }
+                                });
+                                break;
+                            case 'execute_results':
+                                $._window('#execute_results', {
+                                    href: script_log_result_api,
+                                    width: '55%',
+                                    height: 380,
+                                    queryParams: {
+                                        hostId: item.host_id,
+                                        eventId: item.sevent_uuid
+                                    },
+                                    maximizable: true,
+                                    extractor: function (data) {
+                                        var html = ''
+                                            ,obj = $.parseJSON(data);
+                                        if(!obj) return '';
+                                        html+='<div class="script-results">';
+                                        for(var i=0;i<obj.length; i++){
+                                            html += '<p>'+obj[i]+'</p>';
+                                        }
+                                        html+='</div>';
+                                        return html;
+                                    }
+                                });
+                                break;
+                        }
+                    });
+                });
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'cluster_name',width:'10%',title:'集群',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = cluster_manage+'?clusterId='+row.cluster_id;
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'hostgroup_name',width:'15%',title:'群组',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = hostgroup_manage+'?hostgroupId='+row.hostgroup_id;
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'host_name',width:'10%',title:'主机',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = host_manage+'?hostId='+row.host_id;
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'script_name',width:'23%',title:'脚本名称',sortable:true,
+                    formatter: function(value, row, index){
+                        if(row.script_id){
+                            var _t = script_manage+'?scriptId='+row.script_id;
+                            return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                        }
+                        return value;
+                    }
+                },
+                {
+                    field:'create_time',width:'10%',title:'创建时间',align:'center',sortable:true
+                },
+                {
+                    field:'task_state',width:'5%',title:'执行状态',sortable:true,
+                    formatter: function(value, row, index){
+                        console.log(row);
+                        var state = '未知'
+                            ,icon_class
+                            ,span_class;
+                        switch (value){
+                            case 1310:
+                                icon_class = 'fa-spin font-grey';
+                                span_class = 'font-grey';
+                                state = '等待';
+                                break;
+                            case 1311:
+                                icon_class = 'fa-spin font-olive';
+                                span_class = 'font-olive';
+                                state = '运行';
+                                break;
+                            case 1312:
+                                icon_class = 'font-orange';
+                                span_class = 'font-orange';
+                                state = '超时';
+                                break;
+                            case 1313:
+                                icon_class = 'font-red';
+                                span_class = 'font-red';
+                                state = '失败';
+                                break;
+                            case 1314:
+                                icon_class = 'font-green';
+                                span_class = 'font-green';
+                                state = '成功';
+                                break;
+                            case 1315:
+                                icon_class = 'font-red';
+                                span_class = 'font-red';
+                                state = '未知';
+                                break;
+                        }
+                        return '<i class="fa fa-circle-o-notch '+icon_class+'"></i> <span class="'
+                                                                +span_class+'">'+state+'</span>';
+                    }
+                },
+                {
+                    field:'triggermode',width:'5%',title:'触发方式',sortable:true,
+                    formatter: function(value, row, index){
+                        var state = '';
+                        switch (value){
+                            case 0:
+                                state = '手动执行';
+                                break;
+                            case 1:
+                                state = '定时任务';
+                                break;
+                            case 2:
+                                state = '发生告警';
+                                break;
+                            case 3:
+                                state = '告警解除';
+                                break;
+                        }
+                        return state;
+                    }
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_script_log_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_script_log_'+row.id+'" style="display: none;">'
+                                  + '<div _t="script_contents" class="menu-more">查看脚本</div>'
+                                  + '<div _t="execute_results" class="menu-more">查看日志</div>'
+                                  + '<div _t="delete_results" class="menu-more">删除日志</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

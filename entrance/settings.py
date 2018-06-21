@@ -12,10 +12,12 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 
 import os
+import urllib3
 import logging
 import djcelery
 
 
+from multiprocessing import cpu_count
 from django.core.urlresolvers import reverse_lazy
 
 
@@ -37,10 +39,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 ROOT_URLCONF = 'entrance.urls'
 
 LOGIN_URL = reverse_lazy('xm2cloud_auth:login')
+
+# Http settings
+HTTP_POOL = urllib3.PoolManager(num_pools=cpu_count()*4)
 
 # Application definition
 INSTALLED_APPS = [
@@ -125,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
-USE_TZ = True
+USE_TZ = False
 
 USE_I18N = True
 
@@ -177,6 +181,29 @@ EMAIL_HOST_PASSWORD = 'zdswmabhnkdpifcb'
 DEFAULT_FROM_EMAIL = 'xmdevops@vip.qq.com'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+
+# Rabbitmq settings
+CHANNEL_RABBITMQ_SSL = False
+CHANNEL_RABBITMQ_PORT = 5672
+CHANNEL_RABBITMQ_ROUTING_KEY = '#'
+CHANNEL_RABBITMQ_HOST = 'ops.xxoo.com'
+CHANNEL_RABBITMQ_VHOST = '/event_engine'
+CHANNEL_RABBITMQ_EXCHANGE_TYPE = 'topic'
+CHANNEL_RABBITMQ_UP_QUEUE = 'event_up_queue'
+CHANNEL_RABBITMQ_DOWN_QUEUE = 'event_down_queue'
+CHANNEL_RABBITMQ_AUTH_USER = 'event_engine_user'
+CHANNEL_RABBITMQ_UP_EXCHANGE = 'event_up_exchange'
+CHANNEL_RABBITMQ_DOWN_EXCHANGE = 'event_down_exchange'
+CHANNEL_RABBITMQ_AUTH_PASS = 'oZ38h0GoA0TehWcAPyIJqaponqo8Itv9'
+
+
+# OpenTsdb settings
+BACKEND_OPENTSDB_PORT = 4242
+BACKEND_OPENTSDB_PROTOCOL = 'http'
+BACKEND_OPENTSDB_USERNAME = ''
+BACKEND_OPENTSDB_PASSWORD = ''
+BACKEND_OPENTSDB_HOST = 'ops.xxoo.com'
 
 
 # Celery settings
@@ -238,3 +265,11 @@ MFA_USER_NAME = 'alice@google.com'
 MFA_SECRET_KEY = 'JBSWY3DPEHPK3PXP'
 MFA_ISSUER_NAME = 'Google Authenticator'
 
+# Task settings
+LOGGING_TASK_KEY_PREFIX = 'xm2cloud_agent::logging::key'
+LOGGING_TASK_VAL_PREFIX = 'xm2cloud_agent::logging::val'
+CHECKING_TASK_KEY_PREFIX = 'xm2cloud_sched::checking::key'
+MONITORING_TASK_KEY_PREFIX = 'xm2cloud_agent::monitoring::key'
+MONITORING_TASK_VAL_PREFIX = 'xm2cloud_agent::monitoring::val'
+AGENT_HEARTBEAT_TASK_KEY_PREFIX = 'xm2cloud_agent::heartbeat::key'
+ENGINE_HEARTBEAT_TASK_KEY_PREFIX = 'xm2cloud_engine::heartbeat::key'

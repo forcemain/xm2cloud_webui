@@ -2,17 +2,33 @@
 from __future__ import unicode_literals
 
 
+import json
+import uuid
+import time
+import base64
+
+
+from django.conf import settings
 from django.db.models import Q, Count
 from django.http.response import JsonResponse
+from django_redis import get_redis_connection
 from django.core.urlresolvers import reverse_lazy
 from django.utils.decorators import classonlymethod
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from djcelery.models import IntervalSchedule, CrontabSchedule
 from django.views.generic import TemplateView, DetailView, View
 
 
+from .mixins import ExecuteScriptMixin
+from .common.rabbitmq import RabbitMQChannelSender
+from .common.models.event.pub_event import PubEvent
+from .signal import script_log as script_log_signals
+from .common.models.event.event_type import EventType
+from .common.models.event.user_script import UserScript
 from .base import JSONListView, JSONCreateView, JSONDeleteView, JSONUpdateView
 from .models import (Cluster, Host, IpLine, IpLinePackage, Continent, HostGroup, AlertContactGroup, DashBoardScreen,
-                     Manufacturer, Region, OemInfo, OperatingSystem)
+                     Manufacturer, Region, OemInfo, OperatingSystem, Script, ScriptGroup, ScriptLog, TimedTask)
 
 
 class QuerySetProxy(list):
@@ -149,8 +165,19 @@ class ClusterManageView(LoginRequiredMixin, TemplateView):
 class ClusterApiListView(LoginRequiredMixin, JSONListView):
     model = Cluster
 
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
     def get_ordering(self):
-        return '-create_time'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
         clusterid, clustersearch = map(
@@ -193,9 +220,6 @@ class ClusterApiListView(LoginRequiredMixin, JSONListView):
                 'hostgroups': obj.hostgroup_set.count(),
                 'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S')
             })
-
-        sort, order = map(self.request.GET.get, ['sort', 'order'])
-        results['rows'].sort(key=lambda r: r[sort or 'id'], reverse=True if order == 'desc' else False)
 
         return results
 
@@ -327,8 +351,19 @@ class HostgroupManageView(LoginRequiredMixin, TemplateView):
 class HostgroupApiListView(LoginRequiredMixin, JSONListView):
     model = HostGroup
 
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
     def get_ordering(self):
-        return 'id'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
         clusterid, hostgroupid, hostid, hostgroupsearch = map(
@@ -377,9 +412,6 @@ class HostgroupApiListView(LoginRequiredMixin, JSONListView):
                 'hosts': obj.host_set.count(),
                 'update_time': obj.update_time.strftime('%Y-%m-%d %H:%S:%M')
             })
-
-        sort, order = map(self.request.GET.get, ['sort', 'order'])
-        results['rows'].sort(key=lambda r: r[sort or 'id'], reverse=True if order == 'desc' else False)
 
         return results
 
@@ -523,8 +555,19 @@ class HostManageView(LoginRequiredMixin, TemplateView):
 class HostApiListView(LoginRequiredMixin, JSONListView):
     model = Host
 
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
     def get_ordering(self):
-        return 'id'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
         hostid, iplineid, regionid, hostgroupid, continentid, manufacturerid, hostsearch = map(
@@ -612,15 +655,12 @@ class HostApiListView(LoginRequiredMixin, JSONListView):
             }
             results['rows'].append(ins)
 
-        sort, order = map(self.request.GET.get, ['sort', 'order'])
-        results['rows'].sort(key=lambda r: r[sort or 'id'], reverse=True if order == 'desc' else False)
-
         return results
 
 
 class HostApiCreateView(LoginRequiredMixin, JSONCreateView):
     model = Host
-    fields = ['name', 'vmcpu', 'vmmem', 'notes', 'expiry_time', 'area', 'firm', 'oems', 'vmos', 'hostgroups']
+    fields = ['name', 'vmcpu', 'vmmem', 'notes', 'bill_method', 'expiry_time', 'area', 'firm', 'oems', 'vmos', 'hostgroups']
 
     def get_ipline_set(self):
         ipline_ids = self.request.POST.getlist('ipline_set', [])
@@ -640,7 +680,7 @@ class HostApiCreateView(LoginRequiredMixin, JSONCreateView):
 class HostApiUpdateView(LoginRequiredMixin, JSONUpdateView):
     model = Host
     pk_url_kwarg = 'id'
-    fields = ['name', 'vmcpu', 'vmmem', 'notes', 'expiry_time', 'area', 'firm', 'oems', 'vmos', 'hostgroups']
+    fields = ['name', 'vmcpu', 'vmmem', 'notes', 'bill_method', 'expiry_time', 'area', 'firm', 'oems', 'vmos', 'hostgroups']
 
     def get_ipline_set(self):
         ipline_ids = self.request.POST.getlist('ipline_set', [])
@@ -660,6 +700,50 @@ class HostApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 class HostApiDeleteView(LoginRequiredMixin, JSONDeleteView):
     model = Host
     pk_url_kwarg = 'id'
+
+
+class MonitorMetricsApiBaseView(View):
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(MonitorMetricsApiBaseView, self).dispatch(request, *args, **kwargs)
+
+    def get_dataurl(self, uri):
+        return '{0}://{1}:{2}/api/{3}'.format(settings.BACKEND_OPENTSDB_PROTOCOL, settings.BACKEND_OPENTSDB_HOST,
+                                              settings.BACKEND_OPENTSDB_PORT, uri)
+
+    def get_headers(self):
+        headers = {'Content-Type': 'application/json'}
+        if not settings.BACKEND_OPENTSDB_USERNAME or not settings.BACKEND_OPENTSDB_PASSWORD:
+            return headers
+        _encode_auth = base64.b64encode('{0}:{1}'.format(settings.BACKEND_OPENTSDB_USERNAME,
+                                                         settings.BACKEND_OPENTSDB_PASSWORD))
+        _authorization = 'Basic {0}'.format(_encode_auth)
+        headers.update({'Authorization': _authorization})
+
+        return headers
+
+
+class MonitorMetricsApiQueryView(MonitorMetricsApiBaseView):
+    def post(self, request, *args, **kwargs):
+        dataurl = self.get_dataurl('query')
+        headers = self.get_headers()
+
+        r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
+        print r.getheaders()
+        data = json.loads(r.data)
+
+        return JsonResponse(data, safe=False)
+
+
+class MonitorMetricsApiSuggestView(MonitorMetricsApiBaseView):
+    def post(self, request, *args, **kwargs):
+        dataurl = self.get_dataurl('suggest')
+        headers = self.get_headers()
+
+        r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
+        data = json.loads(r.data)
+
+        return JsonResponse(data, safe=False)
 
 
 class IpLineListView(LoginRequiredMixin, TemplateView):
@@ -732,8 +816,19 @@ class IpLineDetailView(LoginRequiredMixin, DetailView):
 class IpLineApiListView(LoginRequiredMixin, JSONListView):
     model = IpLine
 
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
     def get_ordering(self):
-        return '-create_time'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
         iplineid, hostid, iplinepackageid, iplinesearch = map(
@@ -789,9 +884,6 @@ class IpLineApiListView(LoginRequiredMixin, JSONListView):
                 'package_name': obj.package and obj.package.name or None,
                 'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S')
             })
-
-        sort, order = map(self.request.GET.get, ['sort', 'order'])
-        results['rows'].sort(key=lambda r: r[sort or 'id'], reverse=True if order == 'desc' else False)
 
         return results
 
@@ -890,8 +982,19 @@ class IpLinePackageDetailView(LoginRequiredMixin, DetailView):
 class IpLinePackageApiListView(LoginRequiredMixin, JSONListView):
     model = IpLinePackage
 
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
     def get_ordering(self):
-        return '-create_time'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
         iplinepackageid, iplineid, iplinepackagesearch = map(
@@ -940,9 +1043,6 @@ class IpLinePackageApiListView(LoginRequiredMixin, JSONListView):
                 'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S')
             })
 
-        sort, order = map(self.request.GET.get, ['sort', 'order'])
-        results['rows'].sort(key=lambda r: r[sort or 'id'], reverse=True if order == 'desc' else False)
-
         return results
 
 
@@ -988,6 +1088,619 @@ class IpLinePackageApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 class IpLinePackageApiDeleteView(LoginRequiredMixin, JSONDeleteView):
     model = IpLinePackage
     pk_url_kwarg = 'id'
+
+
+class ScriptListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/scripts.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/script_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptCreateView, self).get_context_data(**kwargs)
+        context.update({
+            'scriptgroups': ScriptGroup.objects.all()
+        })
+        return context
+
+
+class ScriptUpdateView(LoginRequiredMixin, DetailView):
+    model = Script
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/script_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptUpdateView, self).get_context_data(**kwargs)
+        context.update({
+            'scriptgroups': ScriptGroup.objects.all()
+        })
+        return context
+
+
+class ScriptDetailView(LoginRequiredMixin, DetailView):
+    model = Script
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/script_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptDeleteView(LoginRequiredMixin, DetailView):
+    model = Script
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/script_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptManageView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/script_manage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptManageView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptExecuteView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/script_execute.html'
+
+    def get_context_extra(self):
+        clusterid, hostgroupid, hostid, scriptid = map(
+            lambda k: self.request.GET.get(k, None),
+            ['clusterId', 'hostgroupId', 'hostId', 'scriptId']
+        )
+        context = {
+            'host': HostGroup.objects.filter(pk=hostid).first(),
+            'script': Script.objects.filter(pk=scriptid).first(),
+            'cluster': Cluster.objects.filter(pk=clusterid).first(),
+            'hostgroup': HostGroup.objects.filter(pk=hostgroupid).first()
+        }
+        return context
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptExecuteView, self).get_context_data(**kwargs)
+        context_extra = self.get_context_extra()
+        context.update(context_extra)
+
+        return context
+
+
+class ScriptApiListView(LoginRequiredMixin, JSONListView):
+    model = Script
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        scriptid, scriptsearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['scriptId', 'scriptSearch']
+        )
+        queryset = super(ScriptApiListView, self).get_queryset().filter(owner=self.request.user)
+        order_by_field = self.get_ordering()
+
+        if scriptid is not None:
+            queryset = queryset.filter(pk=scriptid)
+            return queryset.order_by(order_by_field)
+
+        if scriptsearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=scriptsearch),
+                Q(notes__contains=scriptsearch),
+                Q(scriptgroup__name__contains=scriptsearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(ScriptApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'contents': obj.contents,
+                'platform': obj.platform,
+                'interpreter': obj.interpreter,
+                'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'scriptgroup': obj.scriptgroup and obj.scriptgroup.name or None,
+            })
+
+        return results
+
+
+class ScriptApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = Script
+    fields = ['contents', 'name', 'parameters', 'notes', 'interpreter', 'platform', 'scriptgroup', 'owner', 'timeout']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class ScriptApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = Script
+    pk_url_kwarg = 'id'
+    fields = ['contents', 'name', 'parameters', 'notes', 'interpreter', 'platform', 'scriptgroup', 'owner', 'timeout']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class ScriptApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = Script
+    pk_url_kwarg = 'id'
+
+
+class ScriptLogListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/script_logs.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptLogListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptLogManageView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/script_log_manage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ScriptLogManageView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
+    model = ScriptLog
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        clusterid, hostgroupid, hostid, scriptid, triggermode = map(
+            lambda field: self.request.GET.get(field, None),
+            ['clusterId', 'hostgroupId', 'hostId', 'scriptId', 'triggerMode']
+        )
+        queryset = super(ScriptLogApiListView, self).get_queryset().filter(owner=self.request.user)
+        order_by_field = self.get_ordering()
+        condition_and_list = Q()
+        if hostid:
+            condition_and_list.add(Q(host__pk=hostid), Q.AND)
+        if scriptid:
+            condition_and_list.add(Q(script__pk=scriptid), Q.AND)
+        if clusterid:
+            condition_and_list.add(Q(cluster__pk=clusterid), Q.AND)
+        if triggermode:
+            condition_and_list.add(Q(triggermode=triggermode), Q.AND)
+        if hostgroupid:
+            condition_and_list.add(Q(hostgroup__pk=hostgroupid), Q.AND)
+
+        queryset = queryset.filter(condition_and_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_context_data(self, **kwargs):
+        reqtaskstate = int(self.request.GET.get('taskState', 1000))
+        context = super(ScriptLogApiListView, self).get_context_data(**kwargs)
+
+        if reqtaskstate == 1000:
+            return context
+
+        object_list = QuerySetProxy([])
+        for obj in context['object_list']:
+            rsptaskstate = obj.task_state()
+            if reqtaskstate != rsptaskstate:
+                continue
+            object_list.append(obj)
+            context['object_list'] = object_list
+
+        return context
+
+    def get_data(self, **context):
+        context = super(ScriptLogApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            rsptaskstate = obj.task_state()
+            results['rows'].append({
+                'id': obj.pk,
+                'host_id': obj.host.pk,
+                'task_state': rsptaskstate,
+                'host_name': obj.host.name,
+                'cluster_id': obj.cluster.pk,
+                'sevent_uuid': obj.sevent_uuid,
+                'user_script': obj.user_script,
+                'triggermode': obj.triggermode,
+                'script_name': obj.script_name,
+                'run_timeout': obj.run_timeout,
+                'hostgroup_id': obj.hostgroup.pk,
+                'cluster_name': obj.cluster.name,
+                'run_parameters': obj.run_parameters,
+                'hostgroup_name': obj.hostgroup.name,
+                'run_interpreter': obj.run_interpreter,
+                'script_id': obj.script and obj.script.pk or None,
+                'create_time': obj.create_time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+        return results
+
+
+class ScriptLogApiCreateView(LoginRequiredMixin, ExecuteScriptMixin, JSONCreateView):
+    model = ScriptLog
+    result_model = ScriptLog
+    sender_class = RabbitMQChannelSender
+    fields = ['triggermode', 'host', 'script', 'cluster', 'hostgroup', 'user_script', 'owner', 'script_name',
+              'sevent_uuid', 'run_timeout', 'run_parameters', 'run_interpreter', 'run_platform']
+
+    @property
+    def data_source(self):
+        return self.request.POST
+
+    @staticmethod
+    def valid_cluster(request):
+        clusterid = request.POST.get('cluster', '')
+
+        return Cluster.objects.filter(pk=clusterid).exists()
+
+    def post(self, request, *args, **kwargs):
+        form_errors = []
+        if self.valid_cluster(request) is False:
+            form_errors.append('The field is required.')
+            return JsonResponse({'cluster': form_errors}, status=403)
+        return super(ScriptLogApiCreateView, self).post(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse_lazy('xm2cloud_cmp:script_log_manage')
+
+    def get_owner(self):
+        owner = super(ScriptLogApiCreateView, self).get_owner()
+        return owner or self.request.user
+
+    def get_parameter_data(self):
+        triggermode = 0
+        owner = self.get_owner()
+        script = self.get_script()
+        script_name = script and script.name or u'自定义脚本'
+        user_script = script and script.contents or self.data_source.get('user_script', '')
+
+        return {
+            'owner': owner, 'script': script, 'script_name': script_name, 'triggermode': triggermode,
+            'user_script': user_script
+        }
+
+    def form_valid(self, form):
+        eventsender = self.get_sender()
+        sevent_uuid = uuid.uuid4().__str__()
+        public_event, target_hosts = self.get_instances_data(sevent_uuid)
+
+        self.result_model.objects.bulk_create(target_hosts)
+        eventsender.publish_message(public_event.to_json())
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class ScriptLogApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = ScriptLog
+    pk_url_kwarg = 'id'
+
+
+class ScriptLogApiResultView(LoginRequiredMixin, View):
+    def get(self, request):
+        event_id, host_id = map(lambda k: request.GET.get(k, None), ['eventId', 'hostId'])
+        rds = get_redis_connection('default')
+        key = '{0}::{1}::{2}'.format(settings.LOGGING_TASK_VAL_PREFIX, event_id, host_id)
+        val = rds.zrange(key, 0, -1)
+
+        return JsonResponse(val, status=200, safe=False)
+
+
+class TimedTaskListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/timedtasks.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TimedTaskCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/timedtask_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskCreateView, self).get_context_data(**kwargs)
+        context.update({
+            'scripts': Script.objects.all()
+        })
+        return context
+
+
+class TimedTaskUpdateView(LoginRequiredMixin, DetailView):
+    model = TimedTask
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/timedtask_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TimedTaskDetailView(LoginRequiredMixin, DetailView):
+    model = TimedTask
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/timedtask_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TimedTaskDeleteView(LoginRequiredMixin, DetailView):
+    model = TimedTask
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/timedtask_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TimedTaskManageView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/timedtask_manage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TimedTaskManageView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TimedTaskApiListView(LoginRequiredMixin, JSONListView):
+    model = TimedTask
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'date_changed')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        queryset = super(TimedTaskApiListView, self).get_queryset().filter(owner=self.request.user)
+        order_by_field = self.get_ordering()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(TimedTaskApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'enabled': obj.enabled,
+                'cluster_id': obj.cluster.pk,
+                'sevent_uuid': obj.sevent_uuid,
+                'cluster_name': obj.cluster.name,
+                'total_run_count': obj.total_run_count,
+                'host_id': obj.host and obj.host.pk or None,
+                'host_name': obj.host and obj.host.name or None,
+                'script_id': obj.script and obj.script.pk or None,
+                'crontab_id': obj.crontab and obj.crontab.pk or None,
+                'script_name': obj.script and obj.script.name or None,
+                'interval_id': obj.interval and obj.interval.pk or None,
+                'crontab_hour': obj.crontab and obj.crontab.hour or None,
+                'hostgroup_id': obj.hostgroup and obj.hostgroup.pk or None,
+                'crontab_minute': obj.crontab and obj.crontab.minute or None,
+                'interval_every': obj.interval and obj.interval.every or None,
+                'hostgroup_name': obj.hostgroup and obj.hostgroup.name or None,
+                'interval_period': obj.interval and obj.interval.period or None,
+                'crontab_day_of_week': obj.crontab and obj.crontab.day_of_week or None,
+                'crontab_day_of_month': obj.crontab and obj.crontab.day_of_month or None,
+                'crontab_month_of_year': obj.crontab and obj.crontab.month_of_year or None,
+                'last_run_at': obj.last_run_at and obj.last_run_at.strftime('%Y-%m-%d %H:%M:%S') or None,
+                'date_changed': obj.date_changed and obj.date_changed.strftime('%Y-%m-%d %H:%M:%S') or None
+            })
+
+        return results
+
+
+class TimedTaskApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = TimedTask
+    fields = ['name', 'task', 'interval', 'crontab', 'args', 'kwargs', 'queue', 'exchange', 'routing_key', 'expires',
+              'enabled', 'last_run_at', 'total_run_count', 'date_changed', 'description', 'host', 'owner', 'script',
+              'hostgroup', 'cluster', 'sevent_uuid']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.task = 'executor.timedtask'
+        self.kwargs = json.dumps({
+            'owner': self.object.owner.pk,
+            'timedtask': self.object.sevent_uuid,
+            'host': self.object.host and self.object.host.pk or None,
+            'script': self.object.script and self.object.script.pk or None,
+            'cluster': self.object.cluster and self.object.cluster.pk or None,
+            'hostgroup': self.object.hostgroup and self.object.hostgroup.pk or None
+        })
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class CrontabApiListView(LoginRequiredMixin, JSONListView):
+    model = CrontabSchedule
+
+    def get_data(self, **context):
+        context = super(CrontabApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        objects_list = context['object_list']
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'hour': obj.hour,
+                'minute': obj.minute,
+                'day_of_week': obj.day_of_week,
+                'day_of_month': obj.day_of_month,
+                'month_of_year': obj.month_of_year
+            })
+
+        return results
+
+
+class CrontabApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = CrontabSchedule
+    fields = ['hour', 'minute', 'day_of_week', 'day_of_month', 'month_of_year']
+
+    def form_valid(self, form):
+        form.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class IntervalApiListView(LoginRequiredMixin, JSONListView):
+    model = IntervalSchedule
+
+    def get_data(self, **context):
+        context = super(IntervalApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        objects_list = context['object_list']
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'every': obj.every,
+                'period': obj.period
+            })
+
+        return results
+
+
+class IntervalApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = IntervalSchedule
+    fields = ['every', 'period']
+
+    def form_valid(self, form):
+        form.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
 
 
 class DashboardScreenListApiView(LoginRequiredMixin, JSONListView):

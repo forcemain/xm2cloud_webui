@@ -1,0 +1,215 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-tool" region="north" title="<a class='link-underline'>执行记录</a>" split="false"
+                 border="false" collapsible="false">
+                <div class="nav-tool-container">
+                    <div class="lf left-tools">
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="cluster_select" name="cluster" class="easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="集群: " style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="hostgroup_select" name="hostgroup" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="群组: " style="width:602px">
+                                </select>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="select-group-split">
+                        </div>
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="host_select" name="host" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="主机: " style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="triggermode_select" name="trigger_mode" class="select-item easyui-combobox" label="触发: "
+                                        prompt="--请选择--" style="width:300px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <select id="task_state_select" name="task_state_select" class="select-item easyui-combobox" label="状态: "
+                                        prompt="--请选择--" style="width:300px">
+                                </select>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="select-group-split">
+                        </div>
+                        <div class="select-group">
+                            <div class="lf select-item">
+                                <select id="script_select" class="select-item easyui-combobox"
+                                        prompt="--请选择--" disabled="true" label="脚本: " style="width:842px">
+                                </select>
+                            </div>
+                            <div class="lf select-item">
+                                <a id="script_log_search" href="#" class="tool-button easyui-linkbutton button-white normal-button">
+                                    <i class="fa fa-search"> 查询</i>
+                                </a>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+                    <div class="rt right-tools">
+                        <div id="execute_state" class="execute_state">
+                            <i class="fa fa-circle-o-notch font-green"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control"
+                 href="{% url 'xm2cloud_cmp:script_logs' %}">
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var ajax_csrf_token = "{{ csrf_token }}"
+            ,script_logs = "{% url 'xm2cloud_cmp:script_logs' %}"
+            ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+            ,script_list_api = "{% url 'xm2cloud_cmp:api_script_list' %}"
+            ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+            ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}";
+
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+        var host_select = $('#host_select')
+            ,execute_state = $('#execute_state')
+            ,script_select = $('#script_select')
+            ,cluster_select = $('#cluster_select')
+            ,hostgroup_select = $('#hostgroup_select')
+            ,task_state_select = $('#task_state_select')
+            ,triggermode_select = $('#triggermode_select');
+
+        $._ajax({
+            type: 'GET',
+            url: cluster_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#triggermode_select', {
+                    disabled: false,
+                    formatter: function (row) {
+                        return row.name;
+                    },
+                    data: [
+                            {'id': '0', 'name': '手动执行'},
+                            {'id': '1', 'name': '定时任务'},
+                            {'id': '2', 'name': '发生告警'},
+                            {'id': '3', 'name': '告警解除'}
+                    ]
+                });
+                $._combobox('#task_state_select', {
+                    disabled: false,
+                    formatter: function (row) {
+                        return row.name;
+                    },
+                    data: [
+                            {'id': '1310', 'name': '等待'},
+                            {'id': '1311', 'name': '执行'},
+                            {'id': '1312', 'name': '超时'},
+                            {'id': '1313', 'name': '失败'},
+                            {'id': '1314', 'name': '成功'},
+                            {'id': '1315', 'name': '未知'}
+                    ]
+                });
+                $._combobox('#cluster_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        hostgroup_select.combobox('clear');
+                        $._ajax({
+                            type: 'GET',
+                            url: hostgroup_list_api+'?clusterId='+record.id,
+                            traditional: true,
+                            error_width: 501,
+                            beforeSend: function (XHR) {
+                            },
+                            success: function (data) {
+                                $._combobox('#hostgroup_select', {
+                                    disabled: false,
+                                    onSelect: function (record) {
+                                        host_select.combobox('clear');
+                                        $._ajax({
+                                            type: 'GET',
+                                            url: host_list_api + '?hostgroupId='+record.id,
+                                            traditional: true,
+                                            error_width: 501,
+                                            beforeSend: function (XHR) {
+                                            },
+                                            success: function (data){
+                                                $._combobox('#host_select', {
+                                                    disabled: false,
+                                                    formatter: function (row) {
+                                                        return row.name;
+                                                    },
+                                                    onLoadSuccess: function (){
+                                                    }
+                                                });
+                                                host_select.combobox('loadData', data.rows);
+                                            },
+                                            complete: function () {
+                                            }
+                                        })
+                                    },
+                                    onLoadSuccess: function (){
+                                    }
+
+                                });
+                                hostgroup_select.combobox('loadData', data.rows);
+                            },
+                            complete: function () {
+                            }
+                        })
+                    },
+                    onLoadSuccess: function (){
+                        $._ajax({
+                            type: 'GET',
+                            url: script_list_api,
+                            traditional: true,
+                            error_width: 501,
+                            beforeSend: function (XHR) {
+                            },
+                            success: function (data){
+                                $._combobox('#script_select', {
+                                    disabled: false,
+                                    onLoadSuccess: function () {
+                                    }
+                                });
+                                script_select.combobox('loadData', data.rows);
+                            },
+                            complete: function () {
+                            }
+                        })
+                    }
+                });
+                cluster_select.combobox('loadData', data.rows);
+            },
+            complete: function () {
+            }
+        });
+
+        $('#script_log_search').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: script_logs});
+            }
+        })
+    </script>
+{% endblock %}

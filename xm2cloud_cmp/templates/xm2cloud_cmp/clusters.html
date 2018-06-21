@@ -22,11 +22,25 @@
         $._datagrid('#cluster_datagrid', {
             url: cluster_list_api,
             onLoadSuccess: function (data) {
-                var row_num = $(this).datagrid('getRows').length;
-                for(var i=0; i<row_num; i++){
-                    var mbutton_id = 'mb_cluster_'+i;
-                    $('#'+mbutton_id).menubutton({menu: '#mt_cluster_'+i});
-                }
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_cluster_'+item.id;
+                    var mt_id = '#mt_cluster_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'context_set':
+                                alert('参数设置: '+item.id);
+                                break;
+                            case 'execute_script':
+                                alert('执行脚本: '+item.id);
+                                break;
+                            case 'alert_logs':
+                                alert('告警日志: '+item.id);
+                                break;
+                        }
+                    });
+                });
                 
                 $('.cluster-detail').unbind('click').bind('click', function () {
                     var _t = $(this).attr('_t');
@@ -64,12 +78,12 @@
                 {
                     field:'operation',width:'10%',title:'操作',align:'center',
                     formatter: function(value, row, index){
-                        var tools = '<a id="mb_cluster_'+index+'" class="normal-link">'
+                        var tools = '<a id="mb_cluster_'+row.id+'" class="normal-link">'
                                   + '<font class="link-underline">更多</font></a>';
-                        var extra = '<div id="mt_cluster_'+index+'" style="display: none;">'
-                                  + '<div>参数设置</div>'
-                                  + '<div>脚本执行</div>'
-                                  + '<div>告警日志</div></div>';
+                        var extra = '<div id="mt_cluster_'+row.id+'" style="display: none;">'
+                                  + '<div _t="context_set" class="menu-more">参数设置</div>'
+                                  + '<div _t="execute_script" class="menu-more">脚本执行</div>'
+                                  + '<div _t="alert_logs" class="menu-more">告警日志</div></div>';
                         return tools + extra;
                     }
                 }

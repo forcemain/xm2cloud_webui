@@ -1,0 +1,77 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-tool" region="north" title="<a class='link-underline'>定时任务</a>" split="false"
+                 border="false" collapsible="false">
+                <div class="nav-tool-container">
+                    <div class="lf left-tools">
+                        <a name="add" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-plus"> 添加</i></a>
+                        <a name="edit" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-pencil"> 修改</i></a>
+                        <a name="del" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-minus"> 删除</i></a>
+                        <a name="run" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-play"> 启动</i></a>
+                        <a name="stop" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-pause"> 停止</i></a>
+                    </div>
+                    <div class="rt right-tools">
+                        <input id="timedtask_search" name="timedtask_search" class="easyui-textbox" prompt="搜一下, 又不会怀孕～">
+                        <a href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-search"> 搜一下</i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control"
+                 href="{% url 'xm2cloud_cmp:timedtasks' %}">
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var ajax_csrf_token = "{{ csrf_token }}"
+            ,timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}"
+            ,timedtask_create = "{% url 'xm2cloud_cmp:timedtask_create' %}"
+            ,timedtask_update = "{% url 'xm2cloud_cmp:timedtask_update' slug=0 %}"
+            ,timedtask_delete = "{% url 'xm2cloud_cmp:timedtask_delete' slug=0 %}";
+
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+        $(function () {
+            $('a.tool-button').on('click', function () {
+                var that = this
+                    ,name = $(that).attr('name');
+
+                var options = {}
+                    ,selected = $('#timedtask_datagrid').datagrid('getSelected');
+                switch (name){
+                    case 'add':
+                        options.href = timedtask_create;
+                        break;
+                    case 'edit':
+                        if(!selected){
+                            options.href = timedtask_list;
+                            break;
+                        }
+                        options.href = timedtask_update.replace('/0/', '/'+selected.id+'/');
+                        break;
+                    case 'del':
+                        if(!selected){
+                            options.href = timedtask_list;
+                            break;
+                        }
+                        options.href = timedtask_delete.replace('/0/', '/'+selected.id+'/');
+                        break;
+                }
+                $._control('#control', options);
+            });
+        })
+    </script>
+{% endblock %}

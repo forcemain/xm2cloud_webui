@@ -1,11 +1,147 @@
+{% load static %}
 <div class="nav-page-container">
     <div class="page-title">
         <span>主机[ {{ object.name }} ]</span>
     </div>
-    <div class="page-notice">
-        请完善以下信息,方便我们更好的为您服务.
-    </div>
     <div class="page-body">
+        <div class="list-detail">
+            <ul>
+                <li class="list-col">
+                    <dl>
+                        <dt>UUID:</dt>
+                        <dd>{{ object.pk }}</dd>
+                    </dl>
+                    <dl>
+                        <dt>状态:</dt>
+                        <dd>
+                            <span class="{% if object.is_running %}font-green{% else %}font-red{% endif %}">
+                            {% if object.is_running %}运行中{% else %}已关闭{% endif %}
+                            </span>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt>计费方式:</dt>
+                        <dd>
+                             {% if object.bill_method == 0 %}
+                                 包年/包月
+                             {% elif object.bill_method == 1 %}
+                                 流量/计算
+                             {% endif %}
+                        </dd>
+                    </dl>
+                </li>
+                <li class="list-col">
+                    <dl>
+                        <dt>厂商:</dt>
+                        <dd>
+                            <a href="{{ object.firm.website }}" class="link-underline">{{ object.firm.name }}</a>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt>大洲:</dt>
+                        <dd>{{ object.area.continent.name }}</dd>
+                    </dl>
+                    <dl>
+                        <dt>区域:</dt>
+                        <dd>{{ object.area.name }}</dd>
+                    </dl>
+                    <dl>
+                        <dt>创建时间:</dt>
+                        <dd>{{ object.create_time|date:'Y-m-d H:i:s' }}</dd>
+                    </dl>
+                    <dl>
+                        <dt>到期时间:</dt>
+                        <dd>{{ object.expiry_time|date:'Y-m-d H:i:s' }}</dd>
+                    </dl>
+                </li>
+            </ul>
+            <div class="clear"></div>
+        </div>
+        <div class="detail-tabs">
+            <div id="detail-tabs" class="easyui-tabs tabs-underline tab-color-blue" border="false">
+                <div class="charts" title="云监控">
+                    <div class="charts-tool">
+                        <div class="lf">
+                            <a href="#" _start="1h-ago" _downsample="30s-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">1小时</a>
+                            <a href="#" _start="3h-ago" _downsample="1m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">3小时</a>
+                            <a href="#" _start="6h-ago" _downsample="2m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">6小时</a>
+                            <a href="#" _start="12h-ago" _downsample="4m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">12小时</a>
+                            <a href="#" _start="1d-ago" _downsample="8m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">1天</a>
+                            <a href="#" _start="3d-ago" _downsample="24m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">3天</a>
+                            <a href="#" _start="7d-ago" _downsample="56m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">7天</a>
+                            <a href="#" _start="14d-ago" _downsample="112m-avg-nan" class="tool-button easyui-linkbutton button-white normal-button">14天</a>
+                        </div>
+                        <div class="rt"></div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="charts-data">
+                        <div class="chart lf">
+                            <div class="chart-tool">
+                                <div class="title lf">CPU空闲率(%)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="cpu.idle" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart rt">
+                            <div class="chart-tool">
+                                <div class="title lf">NET入流量(B)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="net.if.in.bytes.persec" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart lf">
+                            <div class="chart-tool">
+                                <div class="title lf">NET错误包(个)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="net.if.out.packets.error" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart rt">
+                            <div class="chart-tool">
+                                <div class="title lf">NET出流量(B)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="net.if.out.bytes.persec" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart lf">
+                            <div class="chart-tool">
+                                <div class="title lf">PPS入包率(个)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="net.if.in.packets.persec" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart rt">
+                            <div class="chart-tool">
+                                <div class="title lf">MEM剩余量(B)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="mem.memfree" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart lf">
+                            <div class="chart-tool">
+                                <div class="title lf">DFS剩余量(B)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="df.bytes.free" class="chart-data">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="page-foot">
         <div class="operation rt">
@@ -15,12 +151,238 @@
     </div>
 </div>
 
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/datetime.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/echarts.common.min.js' %}"></script>
 <script type="text/javascript">
-    var host_list = "{% url 'xm2cloud_cmp:hosts' %}";
+    var selected_id = "{{ object.pk }}"
+        ,host_list = "{% url 'xm2cloud_cmp:hosts' %}"
+        ,monitor_metrics_query_api = "{% url 'xm2cloud_cmp:api_monitor_metrics_query' %}";
 
+    function renderer_chars() {
+        var start = arguments[0]
+            ,downsample = arguments[1];
+        $.each(arguments, function (k, v) {
+            if(k < 2) return;
+            var data = {
+                queries: [],
+                start: start,
+                msResolution: true
+            };
+            switch (v){
+                case 'cpu.idle':
+                    data['queries'].push({
+                        aggregator: 'avg',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'mem.memfree':
+                    data['queries'].push({
+                        aggregator: 'avg',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'df.bytes.free':
+                    data['queries'].push({
+                        aggregator: 'min',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'net.if.in.bytes.persec':
+                    data['queries'].push({
+                        aggregator: 'max',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'net.if.out.bytes.persec':
+                    data['queries'].push({
+                        aggregator: 'max',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'net.if.out.packets.error':
+                    data['queries'].push({
+                        aggregator: 'max',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+                case 'net.if.in.packets.persec':
+                    data['queries'].push({
+                        aggregator: 'max',
+                        metric: v,
+                        downsample: downsample,
+                        filters: [
+                            {
+                                type: 'literal_or',
+                                tagk: 'uuid',
+                                filter: selected_id,
+                                groupBy: false
+                            }
+                        ]
+                    });
+                    break;
+            }
+
+            var options = {
+                data: JSON.stringify(data),
+                error_width: 501,
+                url: monitor_metrics_query_api,
+                success: function (data) {
+                    var m = {};
+                    for(var i = 0; i<data.length; i++){
+                        var c = data[i];
+                        if(c.error) continue;
+                        var x_cur = [];
+                        var y_cur = [];
+                        var skeys = [];
+                        $.each(c.dps, function (k, v) {
+                            skeys.push(k);
+                        });
+                        skeys = skeys.sort(function (p, n) {
+                            return parseInt(p)-parseInt(n);
+                        });
+                        for(var j = 0; j<skeys.length; j++){
+                            var c_v = c.dps[skeys[j]];
+                            var c_k = DateUtil.dateToStr('MM-dd HH:mm:ss', new Date(parseInt(skeys[j])));
+                            x_cur.push(c_k);
+                            y_cur.push(c_v);
+                        }
+                        if(!m[c.metric]) m[c.metric] = {'x': [], 'y': []};
+                        m[c.metric]['x'].push(x_cur);
+                        m[c.metric]['y'].push(y_cur);
+                    }
+                    for(var metric in m) {
+                        var o = {
+                            tooltip: {
+                                trigger: 'axis'
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '3%',
+                                containLabel: true
+                            },
+                            toolbox: {
+                                feature: {
+                                    restore: {
+                                        how: true
+                                    },
+                                    saveAsImage: {
+                                        show: true
+                                    }
+                                }
+                            },
+                            xAxis: {},
+                            yAxis: {
+                                type: 'value',
+                                axisLabel: {
+                                    inside: true,
+                                    textStyle: {
+                                        color: function (value, index) {
+                                            return '#999';
+                                        }
+                                    }
+                                }
+                            },
+                            series: []
+                        };
+                        var metric_data = m[metric];
+                        for (var k = 0; k < metric_data.x.length; k++) {
+                            var c_x = metric_data.x[k];
+                            var c_y = metric_data.y[k];
+                            o['xAxis'] = {
+                                type: 'category',
+                                boundaryGap: false,
+                                data: c_x
+                            };
+                            o['series'].push({
+                                name: metric,
+                                type: 'line',
+                                data: c_y
+                            })
+                        }
+                        $._render(metric, o);
+                    }
+                },
+                complete: function () {}
+            };
+            $._ajax(options);
+        })
+    }
     $('#goback_host').linkbutton({
         onClick: function () {
             $._control('#control', {href: host_list});
         }
     });
+    $('#detail-tabs').tabs({
+        onSelect: function (title, index) {
+            switch(title){
+                case '云监控':
+                    renderer_chars('1h-ago', '30s-avg-nan', 'cpu.idle', 'mem.memfree', 'df.bytes.free',
+                                   'net.if.in.bytes.persec', 'net.if.out.bytes.persec', 'net.if.out.packets.error',
+                                   'net.if.in.packets.persec', 'net.if.out.packets.persec');
+                    break;
+            }
+        }
+    });
+    $('a.tool-button').unbind('click').bind('click', function () {
+        var start = $(this).attr('_start');
+        var downsample = $(this).attr('_downsample');
+        renderer_chars(start, downsample, 'cpu.idle', 'mem.memfree', 'df.bytes.free',
+                       'net.if.in.bytes.persec', 'net.if.out.bytes.persec', 'net.if.out.packets.error',
+                       'net.if.in.packets.persec', 'net.if.out.packets.persec');
+    })
 </script>

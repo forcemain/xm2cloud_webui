@@ -54,11 +54,28 @@
         $._datagrid('#host_datagrid', {
             url: host_list_api,
             onLoadSuccess: function (data) {
-                var row_num = $(this).datagrid('getRows').length;
-                for(var i=0; i<row_num; i++){
-                    var mbutton_id = 'mb_host_'+i;
-                    $('#'+mbutton_id).menubutton({menu: '#mt_host_'+i});
-                }
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_host_'+item.id;
+                    var mt_id = '#mt_host_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'context_set':
+                                alert('参数设置: '+item.id);
+                                break;
+                            case 'remote_login':
+                                alert('远程登陆: '+item.id);
+                                break;
+                            case 'execute_logs':
+                                alert('执行记录: '+item.id);
+                                break;
+                            case 'gray_release':
+                                alert('灰度发布: '+item.id);
+                                break
+                        }
+                    });
+                });
 
                 $('.host-detail').unbind('click').bind('click', function () {
                     var _t = $(this).attr('_t');
@@ -77,17 +94,13 @@
                 {
                     field:'monitor',width:'3%',title:'监控',align:'center',
                     formatter: function(value, row, index){
-                        return '<i class="fa fa-line-chart font-red"></i>'
+                        return '<i class="fa fa-line-chart font-green"></i>'
                     }
                 },
                 {
                     field:'check_state',width:'4%',title:'状态',
                     formatter: function(value, row, index){
-                        var state = '<a class="font-green">运行中</a>';
-                        if(!row.checkstate){
-                            state = '<a class="font-red">不可达</a>';
-                        }
-                        return state;
+                        return '<a class="font-green">运行中</a>';
                     }
                 },
                 {
@@ -139,19 +152,19 @@
                 {
                     field:'exception',width:'5%',title:'异常',sortable:true,
                     formatter: function(value, row, index){
-                        return '<a class="link-underline font-red">待确认</a>';
+                        return '<a class="link-underline font-green">已确认</a>';
                     }
                 },
                 {
                     field:'operation',width:'10%',title:'操作',align:'center',
                     formatter: function(value, row, index){
-                        var tools = '<a id="mb_host_'+index+'" class="normal-link">'
+                        var tools = '<a id="mb_host_'+row.id+'" class="normal-link">'
                                   + '<font class="link-underline">更多</font></a>';
-                        var extra = '<div id="mt_host_'+index+'" style="display: none;">'
-                                  + '<div>参数设置</div>'
-                                  + '<div>远程登陆</div>'
-                                  + '<div>执行记录</div>'
-                                  + '<div>灰度发布</div></div>';
+                        var extra = '<div id="mt_host_'+row.id+'" style="display: none;">'
+                                  + '<div _t="context_set" class="menu-more">参数设置</div>'
+                                  + '<div _t="remote_login" class="menu-more">远程登陆</div>'
+                                  + '<div _t="execute_logs" class="menu-more">执行记录</div>'
+                                  + '<div _t="gray_release" class="menu-more">灰度发布</div></div>';
                         return tools + extra;
                     }
                 }
