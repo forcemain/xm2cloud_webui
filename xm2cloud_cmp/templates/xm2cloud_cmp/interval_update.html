@@ -1,0 +1,103 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认变更 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联实例 : </div>
+                <div class="lf form-input">
+                    <a target="_blank" href="{% url 'xm2cloud_cmp:timedtask_manage' %}?intervalId={{ object.pk }}" class="link-underline">
+                        <span class="font-red">{{ object.periodictask_set.count }} 个</span>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">频率 : </div>
+                <div class="lf form-input">
+                    <input id="every" name="every" class="easyui-textbox" value="{{ object.every }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">周期 : </div>
+                <div class="lf form-input">
+                    <select id="period_select" name="period_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            data-options="width:'380',height:'32'">
+                        <option value="days" {% if object.period == 'days' %}selected{% endif %}>天</option>
+                        <option value="hours" {% if object.period == 'hours' %}selected{% endif %}>小时</option>
+                        <option value="minutes" {% if object.period == 'minutes' %}selected{% endif %}>分钟</option>
+                        <option value="seconds" {% if object.period == 'seconds' %}selected{% endif %}>秒</option>
+                        <option value="microseconds" {% if object.period == 'microseconds' %}selected{% endif %}>毫秒</option>
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="update_interval" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,timedtask_create = "{% url 'xm2cloud_cmp:timedtask_create' %}"
+        ,interval_update_api = "{% url 'xm2cloud_cmp:api_interval_update' id=0 %}";
+
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        var every_box = $('#every')
+            ,period_select = $('#period_select')
+            ,update_interval = $('#update_interval');
+        update_interval.linkbutton({
+            onClick: function () {
+                var that = this
+                    ,every = every_box.textbox('getValue')
+                    ,period = period_select.combobox('getValue');
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+                var interval_update_url = interval_update_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: interval_update_url,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: timedtask_create});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {every: every, period: period}
+                })
+            }
+        });
+        $('#goback_timedtask').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: timedtask_create});
+            }
+        });
+    })
+</script>

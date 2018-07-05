@@ -1,0 +1,126 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认变更 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联实例 : </div>
+                <div class="lf form-input">
+                    <a target="_blank" href="{% url 'xm2cloud_cmp:timedtask_manage' %}?crontabId={{ object.pk }}" class="link-underline">
+                        <span class="font-red">{{ object.periodictask_set.count }} 个</span>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                    <div class="lf form-label">分 : </div>
+                <div class="lf form-input">
+                    <input id="minute" name="minute" class="easyui-textbox" value="{{ object.minute }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                    <div class="lf form-label">时 : </div>
+                <div class="lf form-input">
+                    <input id="hour" name="hour" class="easyui-textbox" value="{{ object.hour }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+             <div class="clear"></div>
+            <div class="form-group">
+                    <div class="lf form-label">日 : </div>
+                <div class="lf form-input">
+                    <input id="day_of_week" name="day_of_week" class="easyui-textbox" value="{{ object.day_of_week }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+             <div class="clear"></div>
+            <div class="form-group">
+                    <div class="lf form-label">月 : </div>
+                <div class="lf form-input">
+                    <input id="day_of_month" name="day_of_month" class="easyui-textbox" value="{{ object.day_of_month }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+             <div class="clear"></div>
+            <div class="form-group">
+                    <div class="lf form-label">周 : </div>
+                <div class="lf form-input">
+                    <input id="month_of_year" name="month_of_year" class="easyui-textbox" value="{{ object.month_of_year }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="update_crontab" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,timedtask_create = "{% url 'xm2cloud_cmp:timedtask_create' %}"
+        ,crontab_update_api = "{% url 'xm2cloud_cmp:api_crontab_update' id=0 %}";
+
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        var hour_box = $('#hour')
+            ,minute_box = $('#minute')
+            ,day_of_week_box = $('#day_of_week')
+            ,day_of_month_box = $('#day_of_month')
+            ,update_crontab = $('#update_crontab')
+            ,month_of_year_box = $('#month_of_year');
+        update_crontab.linkbutton({
+            onClick: function () {
+                var that = this
+                    ,hour = hour_box.textbox('getValue')
+                    ,minute = minute_box.textbox('getValue')
+                    ,day_of_week = day_of_week_box.textbox('getValue')
+                    ,day_of_month = day_of_month_box.textbox('getValue')
+                    ,month_of_year = month_of_year_box.textbox('getValue');
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+                var crontab_update_url = crontab_update_api.replace('/0/', '/'+selected_id+'/');
+                $._ajax({
+                    url: crontab_update_url,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: timedtask_create});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        hour: hour, minute: minute, day_of_week: day_of_week, day_of_month: day_of_month,
+                        month_of_year: month_of_year
+                    }
+                })
+            }
+        });
+        $('#goback_timedtask').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: timedtask_create});
+            }
+        });
+    })
+</script>

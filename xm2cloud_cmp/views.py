@@ -3,8 +3,6 @@ from __future__ import unicode_literals
 
 
 import json
-import uuid
-import time
 import base64
 
 
@@ -12,6 +10,7 @@ from django.conf import settings
 from django.db.models import Q, Count
 from django.http.response import JsonResponse
 from django_redis import get_redis_connection
+from urllib3.exceptions import ReadTimeoutError
 from django.core.urlresolvers import reverse_lazy
 from django.utils.decorators import classonlymethod
 from django.views.decorators.csrf import csrf_exempt
@@ -20,15 +19,12 @@ from djcelery.models import IntervalSchedule, CrontabSchedule
 from django.views.generic import TemplateView, DetailView, View
 
 
-from .mixins import ExecuteScriptMixin
-from .common.rabbitmq import RabbitMQChannelSender
-from .common.models.event.pub_event import PubEvent
-from .signal import script_log as script_log_signals
-from .common.models.event.event_type import EventType
-from .common.models.event.user_script import UserScript
+from .tasks import ExecutorTimedTask
 from .base import JSONListView, JSONCreateView, JSONDeleteView, JSONUpdateView
+from .signal import model_task, host_post_save, hostgroup_post_save, cluster_post_save
 from .models import (Cluster, Host, IpLine, IpLinePackage, Continent, HostGroup, AlertContactGroup, DashBoardScreen,
-                     Manufacturer, Region, OemInfo, OperatingSystem, Script, ScriptGroup, ScriptLog, TimedTask)
+                     Manufacturer, Region, OemInfo, OperatingSystem, Script, ScriptGroup, ScriptLog, TimedTask,
+                     TaskWorkFlow, WorkFlowTask)
 
 
 class QuerySetProxy(list):
@@ -255,6 +251,7 @@ class ClusterApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.hostgroup_set = self.get_hostgroup_set()
         self.object.save()
 
@@ -418,6 +415,7 @@ class HostgroupApiListView(LoginRequiredMixin, JSONListView):
 
 class HostgroupApiCreateView(LoginRequiredMixin, JSONCreateView):
     model = HostGroup
+    before_host_set = set()
     fields = ['name', 'notes', 'cluster', 'alertcontactgroup']
 
     def get_host_set(self):
@@ -427,8 +425,14 @@ class HostgroupApiCreateView(LoginRequiredMixin, JSONCreateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.host_set = self.get_host_set()
         self.object.save()
+        after_host_set = set(self.object.host_set.values_list('pk', flat=True))
+
+        hostgroup_post_save.send(sender=self.model, instance=self.object,
+                                 after_host_set=after_host_set,
+                                 before_host_set=self.before_host_set)
 
         data = {'next': self.get_success_url()}
 
@@ -438,6 +442,7 @@ class HostgroupApiCreateView(LoginRequiredMixin, JSONCreateView):
 class HostgroupApiUpdateView(LoginRequiredMixin, JSONUpdateView):
     model = HostGroup
     pk_url_kwarg = 'id'
+    before_host_set = []
     fields = ['name', 'notes', 'cluster', 'alertcontactgroup']
 
     def get_host_set(self):
@@ -445,10 +450,20 @@ class HostgroupApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 
         return Host.objects.filter(pk__in=host_ids)
 
+    def post(self, request, *args, **kwargs):
+        self.before_host_set = set(self.get_object().host_set.values_list('pk', flat=True))
+        return super(HostgroupApiUpdateView, self).post(request, *args, **kwargs)
+
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.host_set = self.get_host_set()
         self.object.save()
+        after_host_set = set(self.object.host_set.values_list('pk', flat=True))
+
+        hostgroup_post_save.send(sender=self.model, instance=self.object,
+                                 after_host_set=after_host_set,
+                                 before_host_set=self.before_host_set)
 
         data = {'next': self.get_success_url()}
 
@@ -458,7 +473,6 @@ class HostgroupApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 class HostgroupApiDeleteView(LoginRequiredMixin, JSONDeleteView):
     model = HostGroup
     pk_url_kwarg = 'id'
-
 
 class HostListView(LoginRequiredMixin, TemplateView):
     template_name = 'xm2cloud_cmp/hosts.html'
@@ -647,7 +661,10 @@ class HostApiListView(LoginRequiredMixin, JSONListView):
                 'vmcpu': obj.vmcpu,
                 'vmmem': obj.vmmem,
                 'vmos': obj.vmos.name,
-                'checkstate': obj.checkstate(),
+                'is_running': obj.is_running(),
+                'is_outdate': obj.is_outdate(),
+                'is_overdue': obj.is_overdue(),
+                'is_unusual': obj.is_unusual(),
                 'agentstate': obj.agentstate(),
                 'binds': obj.ipline_set.count(),
                 'hostgroups': obj.hostgroups.count(),
@@ -669,8 +686,10 @@ class HostApiCreateView(LoginRequiredMixin, JSONCreateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.ipline_set = self.get_ipline_set()
         self.object.save()
+        host_post_save.send(sender=self.model, instance=self.object)
 
         data = {'next': self.get_success_url()}
 
@@ -689,8 +708,10 @@ class HostApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.ipline_set = self.get_ipline_set()
         self.object.save()
+        host_post_save.send(sender=self.model, instance=self.object)
 
         data = {'next': self.get_success_url()}
 
@@ -728,10 +749,11 @@ class MonitorMetricsApiQueryView(MonitorMetricsApiBaseView):
         dataurl = self.get_dataurl('query')
         headers = self.get_headers()
 
-        r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
-        print r.getheaders()
-        data = json.loads(r.data)
-
+        try:
+            r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
+            data = json.loads(r.data)
+        except ReadTimeoutError:
+            data = []
         return JsonResponse(data, safe=False)
 
 
@@ -739,9 +761,11 @@ class MonitorMetricsApiSuggestView(MonitorMetricsApiBaseView):
     def post(self, request, *args, **kwargs):
         dataurl = self.get_dataurl('suggest')
         headers = self.get_headers()
-
-        r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
-        data = json.loads(r.data)
+        try:
+            r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
+            data = json.loads(r.data)
+        except ReadTimeoutError:
+            data = []
 
         return JsonResponse(data, safe=False)
 
@@ -893,7 +917,9 @@ class IpLineApiCreateView(LoginRequiredMixin, JSONCreateView):
     fields = ['band', 'is_preferred', 'ip', 'notes', 'line', 'host', 'package']
 
     def form_valid(self, form):
-        form.save()
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
 
         data = {'next': self.get_success_url()}
 
@@ -906,7 +932,9 @@ class IpLineApiUpdateView(LoginRequiredMixin, JSONUpdateView):
     fields = ['band', 'is_preferred', 'ip', 'notes', 'line', 'host', 'package']
 
     def form_valid(self, form):
-        form.save()
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
 
         data = {'next': self.get_success_url()}
 
@@ -1057,6 +1085,7 @@ class IpLinePackageApiCreateView(LoginRequiredMixin, JSONCreateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.ipline_set = self.get_ipline_set()
         self.object.save()
 
@@ -1077,6 +1106,7 @@ class IpLinePackageApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 
     def form_valid(self, form):
         self.object = form.save()
+        self.object.owner = self.request.user
         self.object.ipline_set = self.get_ipline_set()
         self.object.save()
 
@@ -1327,9 +1357,9 @@ class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
         return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
-        clusterid, hostgroupid, hostid, scriptid, triggermode = map(
+        clusterid, hostgroupid, hostid, scriptid, triggermode, timedtaskid = map(
             lambda field: self.request.GET.get(field, None),
-            ['clusterId', 'hostgroupId', 'hostId', 'scriptId', 'triggerMode']
+            ['clusterId', 'hostgroupId', 'hostId', 'scriptId', 'triggerMode', 'timedtaskId']
         )
         queryset = super(ScriptLogApiListView, self).get_queryset().filter(owner=self.request.user)
         order_by_field = self.get_ordering()
@@ -1344,6 +1374,8 @@ class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
             condition_and_list.add(Q(triggermode=triggermode), Q.AND)
         if hostgroupid:
             condition_and_list.add(Q(hostgroup__pk=hostgroupid), Q.AND)
+        if timedtaskid:
+            condition_and_list.add(Q(timedtask__sevent_uuid=timedtaskid), Q.AND)
 
         queryset = queryset.filter(condition_and_list).distinct()
 
@@ -1402,16 +1434,10 @@ class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
         return results
 
 
-class ScriptLogApiCreateView(LoginRequiredMixin, ExecuteScriptMixin, JSONCreateView):
+class ScriptLogApiCreateView(LoginRequiredMixin, JSONCreateView):
     model = ScriptLog
-    result_model = ScriptLog
-    sender_class = RabbitMQChannelSender
     fields = ['triggermode', 'host', 'script', 'cluster', 'hostgroup', 'user_script', 'owner', 'script_name',
               'sevent_uuid', 'run_timeout', 'run_parameters', 'run_interpreter', 'run_platform']
-
-    @property
-    def data_source(self):
-        return self.request.POST
 
     @staticmethod
     def valid_cluster(request):
@@ -1446,12 +1472,10 @@ class ScriptLogApiCreateView(LoginRequiredMixin, ExecuteScriptMixin, JSONCreateV
         }
 
     def form_valid(self, form):
-        eventsender = self.get_sender()
-        sevent_uuid = uuid.uuid4().__str__()
-        public_event, target_hosts = self.get_instances_data(sevent_uuid)
+        from celery.registry import tasks
+        func = tasks[ExecutorTimedTask.name]
 
-        self.result_model.objects.bulk_create(target_hosts)
-        eventsender.publish_message(public_event.to_json())
+        func.delay(owner=self.request.user.pk, **self.request.POST.dict())
 
         data = {'next': self.get_success_url()}
 
@@ -1490,7 +1514,7 @@ class TimedTaskCreateView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(TimedTaskCreateView, self).get_context_data(**kwargs)
         context.update({
-            'scripts': Script.objects.all()
+
         })
         return context
 
@@ -1504,7 +1528,12 @@ class TimedTaskUpdateView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super(TimedTaskUpdateView, self).get_context_data(**kwargs)
         context.update({
-
+            'hosts': Host.objects.all(),
+            'scripts': Script.objects.all(),
+            'clusters': Cluster.objects.all(),
+            'hostgroups': HostGroup.objects.all(),
+            'crontabs': CrontabSchedule.objects.all(),
+            'intervals': IntervalSchedule.objects.all()
         })
         return context
 
@@ -1566,8 +1595,30 @@ class TimedTaskApiListView(LoginRequiredMixin, JSONListView):
         return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
-        queryset = super(TimedTaskApiListView, self).get_queryset().filter(owner=self.request.user)
+        timedtaskid, crontabid, intervalid, timedtasksearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['timedtaskId', 'crontabId', 'intervalId', 'timedtaskSearch']
+        )
         order_by_field = self.get_ordering()
+        queryset = super(TimedTaskApiListView, self).get_queryset().filter(owner=self.request.user)
+
+        if timedtaskid is not None:
+            queryset = queryset.filter(pk=timedtaskid)
+            return queryset.order_by(order_by_field)
+
+        if crontabid is not None:
+            queryset = queryset.filter(crontab__pk=crontabid)
+
+        if intervalid is not None:
+            queryset = queryset.filter(interval__pk=intervalid)
+
+        if timedtasksearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=timedtasksearch),
+                Q(notes__contains=timedtasksearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
 
         return queryset.order_by(order_by_field)
 
@@ -1616,27 +1667,119 @@ class TimedTaskApiListView(LoginRequiredMixin, JSONListView):
 
 class TimedTaskApiCreateView(LoginRequiredMixin, JSONCreateView):
     model = TimedTask
-    fields = ['name', 'task', 'interval', 'crontab', 'args', 'kwargs', 'queue', 'exchange', 'routing_key', 'expires',
-              'enabled', 'last_run_at', 'total_run_count', 'date_changed', 'description', 'host', 'owner', 'script',
-              'hostgroup', 'cluster', 'sevent_uuid']
+    fields = ['name', 'interval', 'crontab', 'enabled', 'host', 'script', 'hostgroup', 'cluster', 'notes']
+
+    def get_uuid_pk(self, obj):
+        return str(obj and obj.pk or '')
+
+    def get_task_kwargs(self):
+        data = {
+            'owner': str(self.object.owner.pk),
+            'timedtask': str(self.object.sevent_uuid),
+            'host': self.get_uuid_pk(self.object.host),
+            'script': self.get_uuid_pk(self.object.script),
+            'cluster': self.get_uuid_pk(self.object.cluster),
+            'hostgroup': self.get_uuid_pk(self.object.hostgroup)
+        }
+
+        return json.dumps(data)
 
     def form_valid(self, form):
         self.object = form.save()
         self.object.owner = self.request.user
+        self.object.kwargs = self.get_task_kwargs()
         self.object.task = 'executor.timedtask'
-        self.kwargs = json.dumps({
-            'owner': self.object.owner.pk,
-            'timedtask': self.object.sevent_uuid,
-            'host': self.object.host and self.object.host.pk or None,
-            'script': self.object.script and self.object.script.pk or None,
-            'cluster': self.object.cluster and self.object.cluster.pk or None,
-            'hostgroup': self.object.hostgroup and self.object.hostgroup.pk or None
-        })
         self.object.save()
 
         data = {'next': self.get_success_url()}
 
         return JsonResponse(data, status=200)
+
+
+class TimedTaskApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = TimedTask
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    fields = ['name', 'interval', 'crontab', 'enabled', 'host', 'script', 'hostgroup', 'cluster', 'notes']
+
+    def get_uuid_pk(self, obj):
+        return str(obj and obj.pk or '')
+
+    def get_task_kwargs(self):
+        data = {
+            'owner': str(self.object.owner.pk),
+            'timedtask': str(self.object.sevent_uuid),
+            'host': self.get_uuid_pk(self.object.host),
+            'script': self.get_uuid_pk(self.object.script),
+            'cluster': self.get_uuid_pk(self.object.cluster),
+            'hostgroup': self.get_uuid_pk(self.object.hostgroup)
+        }
+
+        return json.dumps(data)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.kwargs = self.get_task_kwargs()
+        self.object.task = 'executor.timedtask'
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class TimedTaskApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = TimedTask
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+
+
+class RegistedTaskApiListView(LoginRequiredMixin, View):
+    def get(self, request):
+        from celery.registry import tasks
+
+        results = {'total': len(tasks), 'rows': []}
+        map(lambda k: results['rows'].append({'id': k, 'name': tasks[k]}), tasks)
+
+        return JsonResponse(results, status=200)
+
+
+class CrontabCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/crontab_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(CrontabCreateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class CrontabUpdateView(LoginRequiredMixin, DetailView):
+    model = CrontabSchedule
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/crontab_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(CrontabUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class CrontabDeleteView(LoginRequiredMixin, DetailView):
+    model = CrontabSchedule
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/crontab_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(CrontabDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
 
 
 class CrontabApiListView(LoginRequiredMixin, JSONListView):
@@ -1648,13 +1791,19 @@ class CrontabApiListView(LoginRequiredMixin, JSONListView):
         objects_list = context['object_list']
 
         for obj in objects_list:
+            hour = obj.hour
+            minute = obj.minute
+            day_of_week = obj.day_of_week
+            day_of_month = obj.day_of_month
+            month_of_year = obj.month_of_year
             results['rows'].append({
                 'id': obj.pk,
-                'hour': obj.hour,
-                'minute': obj.minute,
-                'day_of_week': obj.day_of_week,
-                'day_of_month': obj.day_of_month,
-                'month_of_year': obj.month_of_year
+                'hour': hour,
+                'minute': minute,
+                'day_of_week': day_of_week,
+                'day_of_month': day_of_month,
+                'month_of_year': month_of_year,
+                'name': '{0} {1} {2} {3} {4}'.format(minute, hour, day_of_week, day_of_month, month_of_year)
             })
 
         return results
@@ -1665,11 +1814,70 @@ class CrontabApiCreateView(LoginRequiredMixin, JSONCreateView):
     fields = ['hour', 'minute', 'day_of_week', 'day_of_month', 'month_of_year']
 
     def form_valid(self, form):
-        form.save()
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
 
         data = {'next': self.get_success_url()}
 
         return JsonResponse(data, status=200)
+
+
+class CrontabApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = CrontabSchedule
+    pk_url_kwarg = 'id'
+    fields = ['hour', 'minute', 'day_of_week', 'day_of_month', 'month_of_year']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class CrontabApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = CrontabSchedule
+    pk_url_kwarg = 'id'
+
+
+class IntervalCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/interval_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(IntervalCreateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class IntervalUpdateView(LoginRequiredMixin, DetailView):
+    model = IntervalSchedule
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/interval_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(IntervalUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class IntervalDeleteView(LoginRequiredMixin, DetailView):
+    model = IntervalSchedule
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/interval_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(IntervalDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
 
 
 class IntervalApiListView(LoginRequiredMixin, JSONListView):
@@ -1681,10 +1889,13 @@ class IntervalApiListView(LoginRequiredMixin, JSONListView):
         objects_list = context['object_list']
 
         for obj in objects_list:
+            every = obj.every
+            period = obj.period
             results['rows'].append({
                 'id': obj.pk,
-                'every': obj.every,
-                'period': obj.period
+                'every': every,
+                'period': period,
+                'name': '{0} {1}'.format(every, period)
             })
 
         return results
@@ -1695,11 +1906,167 @@ class IntervalApiCreateView(LoginRequiredMixin, JSONCreateView):
     fields = ['every', 'period']
 
     def form_valid(self, form):
-        form.save()
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
 
         data = {'next': self.get_success_url()}
 
         return JsonResponse(data, status=200)
+
+
+class IntervalApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = IntervalSchedule
+    pk_url_kwarg = 'id'
+    fields = ['every', 'period']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class IntervalApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = IntervalSchedule
+    pk_url_kwarg = 'id'
+
+
+class TaskWorkFlowListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/taskworkflows.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TaskWorkFlowCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/taskworkflow_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowCreateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TaskWorkFlowUpdateView(LoginRequiredMixin, DetailView):
+    model = TaskWorkFlow
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/taskworkflow_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TaskWorkFlowDeleteView(LoginRequiredMixin, DetailView):
+    model = TaskWorkFlow
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/taskworkflow_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TaskWorkFlowDetailView(LoginRequiredMixin, DetailView):
+    model = TaskWorkFlow
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/taskworkflow_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class TaskWorkFlowApiListView(LoginRequiredMixin, JSONListView):
+    model = TaskWorkFlow
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        taskworkflowid, taskworkflowsearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['taskworkflowId', 'taskworkflowSearch']
+        )
+        queryset, order_by_field = super(TaskWorkFlowApiListView, self).get_queryset(), self.get_ordering()
+
+        if taskworkflowid is not None:
+            queryset = queryset.filter(pk=taskworkflowid)
+            return queryset.order_by(order_by_field)
+
+        if taskworkflowsearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=taskworkflowsearch),
+                Q(notes__contains=taskworkflowsearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(TaskWorkFlowApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'workflowtasks': obj.workflowtask_set.count(),
+                'update_time': obj.update_time.strftime('%Y-%m-%d %H:%S:%M')
+            })
+
+        return results
+
+
+class TaskWorkFlowManageView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/taskworkflow_manage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TaskWorkFlowManageView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
 
 
 class DashboardScreenListApiView(LoginRequiredMixin, JSONListView):

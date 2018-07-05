@@ -36,11 +36,13 @@
 {% block scripts %}
     {{ block.super }}
     <script type="text/javascript">
-        var ajax_csrf_token = "{{ csrf_token }}"
+        var pre_page
+            ,ajax_csrf_token = "{{ csrf_token }}"
             ,timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}"
             ,timedtask_create = "{% url 'xm2cloud_cmp:timedtask_create' %}"
             ,timedtask_update = "{% url 'xm2cloud_cmp:timedtask_update' slug=0 %}"
-            ,timedtask_delete = "{% url 'xm2cloud_cmp:timedtask_delete' slug=0 %}";
+            ,timedtask_delete = "{% url 'xm2cloud_cmp:timedtask_delete' slug=0 %}"
+            ,timedtask_update_api = "{% url 'xm2cloud_cmp:api_timedtask_update' slug=0 %}";
 
         $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
 
@@ -50,6 +52,7 @@
                     ,name = $(that).attr('name');
 
                 var options = {}
+                    ,timedtask_update_url
                     ,selected = $('#timedtask_datagrid').datagrid('getSelected');
                 switch (name){
                     case 'add':
@@ -60,16 +63,65 @@
                             options.href = timedtask_list;
                             break;
                         }
-                        options.href = timedtask_update.replace('/0/', '/'+selected.id+'/');
+                        options.href = timedtask_update.replace('/0/', '/'+selected.sevent_uuid+'/');
                         break;
                     case 'del':
                         if(!selected){
                             options.href = timedtask_list;
                             break;
                         }
-                        options.href = timedtask_delete.replace('/0/', '/'+selected.id+'/');
+                        options.href = timedtask_delete.replace('/0/', '/'+selected.sevent_uuid+'/');
                         break;
+                    case 'run':
+                        if(!selected){
+                            options.href = timedtask_list;
+                            break;
+                        }
+                        timedtask_update_url = timedtask_update_api.replace('/0/', '/' + selected.sevent_uuid + '/');
+                        $._ajax({
+                            url: timedtask_update_url,
+                            traditional: true,
+                            error_width: 501,
+
+                            success: function (data) {
+                                console.log(location.href+':'+data);
+                                // location.href = data.next;
+                            },
+                            complete: function () {
+                            },
+                            data: {
+                                name: selected.name, host: selected.host_id, notes: selected.notes,
+                                script: selected.script_id, cluster: selected.cluster_id, crontab: selected.crontab_id,
+                                interval: selected.interval_id, hostgroup: selected.hostgroup_id, enabled: true
+                            }
+                        });
+                        break;
+                    case 'stop':
+                        if(!selected){
+                            options.href = timedtask_list;
+                            break;
+                        }
+                        timedtask_update_url = timedtask_update_api.replace('/0/', '/' + selected.sevent_uuid + '/');
+                        $._ajax({
+                            url: timedtask_update_url,
+                            traditional: true,
+                            error_width: 501,
+
+                            success: function (data) {
+                                console.log(location.href+':'+data);
+                                // location.href = data.next;
+                            },
+                            complete: function () {
+                            },
+                            data: {
+                                name: selected.name, host: selected.host_id, notes: selected.notes,
+                                script: selected.script_id, cluster: selected.cluster_id, crontab: selected.crontab_id,
+                                interval: selected.interval_id, hostgroup: selected.hostgroup_id, enabled: false
+                            }
+                        });
+                        break
                 }
+                pre_page = options.href;
                 $._control('#control', options);
             });
         })

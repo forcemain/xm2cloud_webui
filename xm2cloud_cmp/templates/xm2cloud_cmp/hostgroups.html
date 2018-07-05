@@ -50,7 +50,10 @@
             queryParams: get_query_params(),
             columns:[[
                 {
-                    field:'name',width:'32%',title:'名称',sortable:true,
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'30%',title:'名称',sortable:true,
                     formatter: function(value, row, index){
                         var _t = hostgroup_detail.replace('/0/', '/' + row.id + '/');
                         return '<a _t="'+_t+'" class="hostgroup-detail link-underline">'+value+'</a>';

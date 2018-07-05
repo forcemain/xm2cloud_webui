@@ -1,1 +1,26 @@
-详情 - 定时任务
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>任务[ {{ object.name }} ]</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}";
+
+    $('#_timedtask').linkbutton({
+        onClick: function () {
+            $._control('#control', {href: timedtask_list});
+        }
+    });
+</script>

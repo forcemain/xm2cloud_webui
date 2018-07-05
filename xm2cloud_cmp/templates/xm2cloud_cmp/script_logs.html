@@ -132,6 +132,9 @@
             queryParams: get_query_params(),
             columns:[[
                 {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
                     field:'cluster_name',width:'10%',title:'集群',sortable:true,
                     formatter: function(value, row, index){
                         var _t = cluster_manage+'?clusterId='+row.cluster_id;
@@ -153,7 +156,7 @@
                     }
                 },
                 {
-                    field:'script_name',width:'23%',title:'脚本名称',sortable:true,
+                    field:'script_name',width:'21%',title:'脚本名称',sortable:true,
                     formatter: function(value, row, index){
                         if(row.script_id){
                             var _t = script_manage+'?scriptId='+row.script_id;
@@ -242,6 +245,6 @@
                     }
                 }
             ]]
-        })
+        });
     })
 </script>

@@ -47,6 +47,14 @@ class TimedTaskAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
 
+class TaskWorkFlowAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class WorkFlowTaskAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
 class ScriptGroupAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
@@ -100,6 +108,8 @@ admin.site.register(models.TimedTask, TimedTaskAdmin)
 admin.site.register(models.ScriptGroup, ScriptGroupAdmin)
 admin.site.register(models.AlertContact, AlertContactAdmin)
 admin.site.register(models.Manufacturer, ManufacturerAdmin)
+admin.site.register(models.TaskWorkFlow, TaskWorkFlowAdmin)
+admin.site.register(models.WorkFlowTask, WorkFlowTaskAdmin)
 admin.site.register(models.IpLinePackage, IpLinePackageAdmin)
 admin.site.register(models.ClusterContext, ClusterContextAdmin)
 admin.site.register(models.OperatingSystem, OperatingSystemAdmin)

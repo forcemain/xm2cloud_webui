@@ -67,7 +67,10 @@
             queryParams: get_query_params(),
             columns:[[
                 {
-                    field:'name',width:'20%',title:'名称',sortable:true,
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'18%',title:'名称',sortable:true,
                     formatter: function(value, row, index){
                         var _t = iplinepackage_detail.replace('/0/', '/' + row.id + '/');
                         return '<a _t="'+_t+'" class="iplinepackage-detail link-underline">'+value+'</a>'
@@ -80,7 +83,7 @@
                     }
                 },
                 {
-                    field:'iplines',width:'10%',title:'已加入IP',align:'center',sortable:true,
+                    field:'iplines',width:'11%',title:'已加入IP',align:'center',sortable:true,
                     formatter: function(value, row, index){
                         var _t = host_manage+'?iplinepackageId='+row.id+'&navName=ipline';
                         return '<a target="_blank" href="'+_t+'" class="link-underline">'+row.iplines+'</a>';
@@ -108,7 +111,7 @@
                     field:'update_time',width:'15%',title:'上次修改',sortable:true,
                 },
                 {
-                    field:'notes',width:'20%', title:'备注'
+                    field:'notes',width:'18%', title:'备注'
                 }
             ]]
         })

@@ -1,0 +1,158 @@
+<table id="runninglogs_datagrid" class="easyui-datagrid" data-options="border:false"></table>
+
+<script type="text/javascript">
+    var api_runninglogs_list = "{% url 'xm2cloud_cmp:api_alertrunninglog_list' %}";
+
+    // for auto load csrf_token
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    // for init runninglogs datagrid
+    function init_runninglogs_datagrid(api) {
+        $('#runninglogs_datagrid').datagrid({
+            url: api,
+            fit: true,
+            method: 'GET',
+            pageSize: 20,
+            striped: false,
+            remoteSort: false,
+            rownumbers: true,
+            pagination: true,
+            fitColumns: true,
+            singleSelect: true,
+            checkOnSelect: true,
+            selectOnCheck: true,
+            onLoadSuccess: function (data) {
+                // for instance operator menubutton
+                var row_num = $(this).datagrid('getRows').length;
+                for(var i=0; i<row_num; i++){
+                    var mbutton_id = 'mb_'+i;
+                    $('#'+mbutton_id).menubutton({menu: '#mt_'+i});
+                }
+            },
+            columns:[[
+                {
+                    field:'id',width:'5%',title:'序号',sortable:true
+                },
+                {
+                    field:'hostname',width:'10%',title:'主机名称',sortable:true,
+                    formatter: function(value, row, index){
+                        return '<a href="#" class="extranal-link">'+row.host.name+'</a>';
+                    }
+                },
+                {
+                    field:'sub_metric',width:'16%',title:'TARGET',align:'left',
+                    formatter: function (value, row, index) {
+                        return '<a href="#" class="extranal-link">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'sta_status',width:'6%',title:'最近状态',align:'center',
+                    formatter: function(value, row, index) {
+                        switch (value) {
+                            case 'PASSING':
+                                return '<span class="badge color-green">正常状态</span>';
+                                break;
+                            case 'WARNING':
+                                return '<span class="badge color-yellow">警告状态</span>';
+                                break;
+                            case 'ERROR':
+                                return '<span class="badge color-orange">错误状态</span>';
+                                break;
+                            case 'CRITICAL':
+                                return '<span class="badge color-red">严重状态</span>';
+                                break;
+                            default:
+                                return '<span class="badge color-grayish">未知</span>';
+                                break
+                        }
+                    }
+                },
+                {
+                    field:'end_status',width:'6%',title:'最新状态',align:'center',
+                    formatter: function(value, row, index){
+                        switch (value) {
+                            case 'PASSING':
+                                return '<span class="badge color-green">正常状态</span>';
+                                break;
+                            case 'WARNING':
+                                return '<span class="badge color-yellow">警告状态</span>';
+                                break;
+                            case 'ERROR':
+                                return '<span class="badge color-orange">错误状态</span>';
+                                break;
+                            case 'CRITICAL':
+                                return '<span class="badge color-red">严重状态</span>';
+                                break;
+                            default:
+                                return '<span class="badge color-grayish">未知状态</span>';
+                                break
+                        }
+                    }
+                },
+                {
+                    field:'messages',width:'25%',title:'最近告警',align:'left'
+                },
+                {
+                    field:'sta_time',width:'10%',title:'开始时间',align:'center',
+                    formatter: function(value, row, index){
+                        return to_strdatetime(value);
+                    }
+                },
+                {
+                    field:'end_time',width:'10%',title:'结束时间',align:'center',
+                    formatter: function(value, row, index){
+                        return to_strdatetime(value);
+                    }
+                },
+                {
+                    field:'alert_status',width:'5%',title:'告警状态',align:'center',
+                    formatter: function(value, row, index){
+                        switch (value){
+                            case 'ALERTING':
+                                return '<span class="font-red">告警中</span>';
+                            case 'IGNORED':
+                                return '<span class="font-grayish">已忽略</span>';
+                            case 'RELIEVED':
+                                return '<span class="font-green">已解除</span>';
+                        }
+                    }
+                },
+                {
+                    field:'more_info',width:'8%',title:'查看详情',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看详情</a>';
+                    }
+                }
+            ]]
+        })
+    }
+
+    // for auto reload data from django app backend when click
+    function auto_reload_runninglogs_datagrid() {
+        $('div.action-content .rt span.checkbox-inner').on('click', function () {
+            var status = $(this).children('span.checkbox-checked').css('display') == 'none';
+            if(status){
+                refresh_timer = setInterval(function () {
+                    $('#runninglogs_datagrid').datagrid('reload');
+                }, 60000)
+            }else{
+                if(refresh_timer) clearInterval(refresh_timer);
+            }
+        });
+    }
+    $(function () {
+        // for init runninglogs datagrid
+        init_runninglogs_datagrid(api_runninglogs_list);
+
+        // for auto reload data from django app backend
+        refresh_timer = setInterval(function () {
+            $('#runninglogs_datagrid').datagrid('reload');
+        }, 60000);
+        auto_reload_runninglogs_datagrid(refresh_timer);
+
+        // for bind refresh button with reload action
+        $('[_action="reload"]').on('click', function () {
+            $('#runninglogs_datagrid').datagrid('reload');
+        });
+    });
+</script>

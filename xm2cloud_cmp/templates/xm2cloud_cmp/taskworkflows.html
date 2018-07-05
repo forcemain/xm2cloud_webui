@@ -1,0 +1,85 @@
+{% load static %}
+
+<table id="taskworkflow_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,taskworkflow_manage = "{% url 'xm2cloud_cmp:taskworkflow_manage' %}"
+        ,taskworkflow_list_api = "{% url 'xm2cloud_cmp:api_taskworkflow_list' %}"
+        ,taskworkflow_detail = "{% url 'xm2cloud_cmp:taskworkflow_detail' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['taskworkflowSearch'] = $('#taskworkflow_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $._datagrid('#taskworkflow_datagrid', {
+            url: taskworkflow_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_taskworkflow_'+item.id;
+                    var mt_id = '#mt_taskworkflow_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'execute_task':
+                                alert('执行脚本: '+item.id);
+                                break;
+                            case 'execute_logs':
+                                alert('执行日志: '+item.id);
+                                break;
+                        }
+                    });
+                });
+                
+                $('.taskworkflow-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'32%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = taskworkflow_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="taskworkflow-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'workflowtasks',width:'10%',title:'子任务数',sortable:true,align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="link-underline">'+value+'</a>'
+                    }
+                },
+                {
+                    field:'notes',width:'28%',title:'备注',sortable:true
+                },
+                {
+                    field:'update_time',width:'10%',title:'上次修改',sortable:true
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_taskworkflow_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_taskworkflow_'+row.id+'" style="display: none;">'
+                                  + '<div _t="execute_task" class="menu-more">执行任务</div>'
+                                  + '<div _t="execute_logs" class="menu-more">执行记录</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

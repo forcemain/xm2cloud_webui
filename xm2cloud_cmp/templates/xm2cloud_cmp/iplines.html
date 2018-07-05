@@ -78,6 +78,9 @@
             queryParams: get_query_params(),
             columns:[[
                 {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
                     field:'ip',width:'10%',title:'地址',sortable:true,
                     formatter: function(value, row, index){
                         var _t = ipline_detail.replace('/0/', '/' + row.id + '/');
@@ -88,7 +91,7 @@
                     field:'line',width:'5%',title:'线路'
                 },
                 {
-                    field:'bind',width:'15%',title:'绑定资源',sortable:true,
+                    field:'bind',width:'12%',title:'绑定资源',sortable:true,
                     formatter: function(value, row, index){
                         if(row.host_id && row.host_name) {
                             var _t = host_manage+'?iplineId='+row.id+'&navName=host';

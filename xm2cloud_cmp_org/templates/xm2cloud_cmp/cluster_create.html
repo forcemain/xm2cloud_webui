@@ -1,0 +1,47 @@
+<form id="cluster_create_form" method="post" enctype="multipart/form-data" novalidate>
+    <table cellpadding="40" style="margin: auto;">
+        <tbody>
+            <tr>
+                <td width="80px">集群名称:</td>
+                <td>
+                    <input name="name" class="easyui-textbox"
+                           data-options="missingMessage:'必填项',required:true" maxlength="24"
+                           style="width: 260px;height: 20px;">
+                </td>
+            </tr>
+            <tr>
+                <td>环境类型:</td>
+                <td>
+                    <select name="env" class="easyui-combobox   "
+                            style="width: 260px;height: 20px;">
+                        {% if envirments %}
+                            {% for env in envirments %}
+                                <option value="{{ env.pk }}">{{ env.name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>所属项目:</td>
+                <td>
+                    <select name="project" class="easyui-combobox   "
+                            style="width: 260px;height: 20px;">
+                        {% if projects %}
+                            {% for proj in projects %}
+                                <option value="{{ proj.pk }}">{{ proj.name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>备注:</td>
+                <td>
+                    <input name="notes" class="easyui-textbox"
+                           style="width: 260px;height: 20px;">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</form>

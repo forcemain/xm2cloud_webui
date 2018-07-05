@@ -6,6 +6,7 @@
 <script type="text/javascript">
     var ajax_csrf_token = "{{ csrf_token }}"
         ,script_manage = "{% url 'xm2cloud_cmp:script_manage' %}"
+        ,script_log_manage = "{% url 'xm2cloud_cmp:script_log_manage' %}"
         ,timedtask_list_api = "{% url 'xm2cloud_cmp:api_timedtask_list' %}"
         ,timedtask_detail = "{% url 'xm2cloud_cmp:timedtask_detail' slug=0 %}";
 
@@ -30,7 +31,7 @@
                         var _t = $(this).attr('_t');
                         switch(_t){
                             case 'execute_logs':
-                                alert('执行日志: '+item.sevent_uuid);
+                                location.href = script_log_manage+'?timedtaskId='+item.sevent_uuid;
                                 break;
                         }
                     });
@@ -43,6 +44,9 @@
             },
             queryParams: get_query_params(),
             columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
                 {
                     field:'name',width:'18%',title:'名称',sortable:true,
                     formatter: function(value, row, index){
@@ -58,7 +62,7 @@
                     }
                 },
                 {
-                    field:'policy',width:'15%',title:'策略',
+                    field:'policy',width:'12%',title:'策略',
                     formatter: function(value, row, index){
                         var policy = 'N/A';
                         if(row.interval_id){

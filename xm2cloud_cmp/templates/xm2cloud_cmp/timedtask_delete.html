@@ -1,1 +1,128 @@
-删除 - 定时任务
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认删除 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">{{ object.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">{{ object.notes }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">启用 : </div>
+                <div class="lf form-input">{% if object.enabled %}是{% else %}否{% endif %}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联脚本 : </div>
+                <div class="lf form-input">
+                    <a class="link-underline" target="_blank" href="{% url 'xm2cloud_cmp:script_manage' %}?scriptId={{ object.script.pk }}">{{ object.script.name }}</a>
+                </div>
+            </div>
+            {% if object.crontab %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">周期计划 : </div>
+                    <div class="lf form-input">{{ object.crontab.minute }} {{ object.crontab.hour }} {{ object.crontab.day_of_week }} {{ object.crontab.day_of_month }} {{ object.crontab.month_of_year }}</div>
+                </div>
+            {% endif %}
+            {% if object.interval %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">间隔计划 : </div>
+                    <div class="lf form-input">{{ object.interval.every }} {{ object.interval.period }}</div>
+                </div>
+            {% endif %}
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联集群 : </div>
+                <div class="lf form-input">
+                    <a class="link-underline" target="_blank" href="{% url 'xm2cloud_cmp:cluster_manage' %}?clusterId={{ object.cluster.pk }}">{{ object.cluster.name }}</a>
+                </div>
+            </div>
+            {% if object.hostgroup %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">关联群组 : </div>
+                    <div class="lf form-input">
+                        <a class="link-underline" target="_blank" href="{% url 'xm2cloud_cmp:hostgroup_manage' %}?hostgroupId={{ object.hostgroup.pk }}">{{ object.hostgroup.name }}</a>
+                    </div>
+                </div>
+            {% endif %}
+            {% if object.host %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">关联主机 : </div>
+                    <div class="lf form-input">
+                        <a class="link-underline" target="_blank" href="{% url 'xm2cloud_cmp:host_manage' %}?hostgroupId={{ object.host.pk }}">{{ object.host.name }}</a>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="delete_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,selected_id = "{{ object.sevent_uuid }}"
+        ,timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}"
+        ,timedtask_delete_api = "{% url 'xm2cloud_cmp:api_timedtask_delete' slug=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#delete_timedtask').linkbutton({
+            onClick: function () {
+                var that = this;
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var timedtask_delete_url = timedtask_delete_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: timedtask_delete_url,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: timedtask_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#goback_timedtask').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: timedtask_list});
+            }
+        });
+    })
+</script>

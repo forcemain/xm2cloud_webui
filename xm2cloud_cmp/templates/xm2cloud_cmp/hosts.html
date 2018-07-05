@@ -85,22 +85,13 @@
             queryParams: get_query_params(),
             columns:[[
                 {
-                    field:'name',width:'10%',title:'名称',sortable:true,
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'17%',title:'名称',sortable:true,
                     formatter: function(value, row, index){
                         var _t = host_detail.replace('/0/', '/' + row.id + '/');
                         return '<a _t="'+_t+'" class="host-detail link-underline">'+value+'</a>'
-                    }
-                },
-                {
-                    field:'monitor',width:'3%',title:'监控',align:'center',
-                    formatter: function(value, row, index){
-                        return '<i class="fa fa-line-chart font-green"></i>'
-                    }
-                },
-                {
-                    field:'check_state',width:'4%',title:'状态',
-                    formatter: function(value, row, index){
-                        return '<a class="font-green">运行中</a>';
                     }
                 },
                 {
@@ -132,8 +123,10 @@
                 {
                     field:'agent_state',width:'8%',title:'心跳状态',align:'center',
                     formatter: function(value, row, index){
-                        var state = '<a class="font-green">正常</a>';
-                        if(!row.agentstate){
+                        var state = '';
+                        if(row.is_running){
+                            state = '<a class="font-green">正常</a>';
+                        }else{
                             state = '<a class="font-grayish">N/A</a>';
                         }
                         return state;
@@ -142,17 +135,26 @@
                 {
                     field:'agent_update',width:'8%',title:'AGENT',align:'center',
                     formatter: function(value, row, index){
-                        var state = '<a class="link-underline font-green">运行中</a>';
-                        if(!row.agentstate){
-                            state = '<a class="link-underline font-red">需升级</a>';
+                        var version = '';
+                        if(row.is_running){
+                            version = '<a class="link-underline font-green">'+row.agentstate.version+'</a>';
+                        }else{
+                            version = '<a class="link-underline font-red">待安装</a>';
                         }
-                        return state;
+                        return version;
                     }
                 },
                 {
                     field:'exception',width:'5%',title:'异常',sortable:true,
                     formatter: function(value, row, index){
-                        return '<a class="link-underline font-green">已确认</a>';
+                        var state = '';
+                        if(row.is_unusual) {
+                            state = '<a class="link-underline font-red">待确认</a>';
+                        }else{
+                            state = '<a class="link-underline font-green">已确认</a>';
+                        }
+
+                        return state;
                     }
                 },
                 {

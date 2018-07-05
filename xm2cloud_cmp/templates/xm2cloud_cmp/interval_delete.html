@@ -1,0 +1,81 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认删除 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联实例 : </div>
+                <div class="lf form-input">
+                    <a target="_blank" href="{% url 'xm2cloud_cmp:timedtask_manage' %}?intervalId={{ object.pk }}" class="link-underline">
+                        <span class="font-red">{{ object.periodictask_set.count }} 个</span>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">间隔计划 : </div>
+                <div class="lf form-input">{{ object.every }} {{ object.period }}</div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_timedtask" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="delete_interval" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,interval_delete_api = "{% url 'xm2cloud_cmp:api_interval_delete' id=0 %}";
+
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        var delete_interval = $('#delete_interval');
+        delete_interval.linkbutton({
+            onClick: function () {
+                var that = this;
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+                var interval_delete_url = interval_delete_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: interval_delete_url,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        console.log(location.href+':'+data);
+                        // location.href = data.next;
+                        $._control('#control', {href: pre_page});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#goback_timedtask').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: pre_page});
+            }
+        });
+    })
+</script>

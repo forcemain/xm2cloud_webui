@@ -1,0 +1,192 @@
+<table id="graphitechecks_datagrid" class="easyui-datagrid" data-options="border:false"></table>
+
+<script type="text/javascript">
+    var api_alertgraphitecheck_list = "{% url 'xm2cloud_cmp:api_alertgraphitecheck_list' %}";
+
+    // for auto load csrf_token
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    // for init graphitechecks datagrid
+    function init_graphitechecks_datagrid(api) {
+        $('#graphitechecks_datagrid').datagrid({
+            url: api,
+            fit: true,
+            method: 'GET',
+            pageSize: 10,
+            striped: false,
+            remoteSort: false,
+            rownumbers: true,
+            pagination: true,
+            fitColumns: true,
+            singleSelect: true,
+            checkOnSelect: true,
+            selectOnCheck: true,
+            onLoadSuccess: function (data) {
+                // for instance operator menubutton
+                var row_num = $(this).datagrid('getRows').length;
+                for(var i=0; i<row_num; i++){
+                    var mbutton_id = 'mb_'+i;
+                    $('#'+mbutton_id).menubutton({menu: '#mt_'+i});
+                }
+            },
+            columns:[[
+                {
+                    field:'id',width:'4%',title:'序号',sortable:true
+                },
+                {
+                    field:'name',width:'15%',title:'告警项目',sortable:true,
+                    formatter: function(value, row, index){
+                        return '<a class="extranal-link" href="#">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'calculated_status',width:'6%',title:'运行状态',align:'center',
+                    formatter: function(value, row, index){
+                        switch (value){
+                            case 'PASSING':
+                                return '<span class="badge color-green">正常运行</span>';
+                                break;
+                            case 'INTERMITTENT':
+                                return '<span class="badge color-yellow">间歇异常</span>';
+                                break;
+                            case 'EXCEPTION':
+                                return '<span class="badge color-orange">插件异常</span>';
+                                break;
+                            case 'FAILING':
+                                return '<span class="badge color-red">持续异常</span>';
+                                break;
+                            default:
+                                return '<span class="badge color-grayish">未知状态</span>';
+                                break
+                        }
+                    }
+                },
+                {
+                    field:'metric',width:'16%',title:'TARGET',align:'center',
+                    formatter: function(value, row, index){
+                        var compare_method = 'avg';
+                        switch (row.compare_method){
+                            case 'mines':
+                                compare_method = 'min';
+                                break;
+                            case 'maxes':
+                                compare_method = 'max';
+                                break;
+                            case 'avges':
+                                compare_method = 'avg';
+                                break;
+                        }
+                        return value+'.'
+                              +compare_method+' ('
+                              +row.warning_value+'/'
+                              +row.error_value+'/'
+                              +row.critical_value+')'
+                    }
+                },
+                {
+                    field:'interval',width:'6%',title:'频率',align:'center',
+                    formatter: function(value, row, index){
+                        if(row.interval){
+                            return row.interval.every+'/'+row.interval.period;
+                        }
+                        if(row.crontab){
+                            return row.crontab.minute+' '
+                                  +row.crontab.hour+' '
+                                  +row.crontab.day_of_week+' '
+                                  +row.crontab.day_of_month+' '
+                                  +row.crontab.month_of_year;
+                        }
+                    }
+                },
+                {
+                    field:'from_value',width:'4%',title:'FROM',align:'center',
+                    formatter: function(value, row, index){
+                        var unit = '';
+                        switch (row.from_units){
+                            case 's':
+                                unit = '秒';
+                                break;
+                            case 'min':
+                                unit = '分钟';
+                                break;
+                            case 'h':
+                                unit = '小时';
+                                break;
+                            case 'd':
+                                unit = '天';
+                                break;
+                            case 'w':
+                                unit = '周';
+                                break;
+                            case 'mon':
+                                unit = '月';
+                                break;
+                            case 'y':
+                                unit = '年';
+                                break;
+                        }
+                        return value+unit;
+                    }
+                },
+                {
+                    field:'successive',width:'4%',title:'异常',align:'center',
+                    formatter: function(value, row, index){
+                        return value+'次';
+                    }
+                },
+                {
+                    field:'warning_exec',width:'7%',title:'警告触发',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'error_exec',width:'7%',title:'错误触发',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'critical_relieve',width:'7%',title:'严重触发',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'warning_relieve',width:'7%',title:'警告解除',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'error_relieve',width:'7%',title:'错误解除',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'critical_relieve',width:'7%',title:'严重解除',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a class="inner-link" href="#">查看脚本</a>';
+                    }
+                },
+                {
+                    field:'enabled',width:'4%',title:'启用',align:'center',
+                    formatter: function(value, row, index){
+                        var dat = '是';
+                        var cls = 'font-green';
+                        if(!value){
+                            dat = '否';
+                            cls = 'font-red';
+                        }
+                        return '<a href="#"><span class="'+cls+'">'+dat+'</span></a>';
+                    }
+                }
+            ]]
+        })
+    }
+    $(function () {
+        // for init graphitechecks datagrid
+        init_graphitechecks_datagrid(api_alertgraphitecheck_list);
+    });
+</script>

@@ -2,14 +2,12 @@
 from __future__ import unicode_literals
 
 
-import uuid
-
-
 from django.utils import timezone
 from django.db import models as db_models
 from django.contrib.auth import models as auth_models
 
 
+from .common.enhance import Random
 from .common.storage import generate_filename
 from .signal import profile as profile_signals
 from .common.db.models import StrictedImageFileField
@@ -30,7 +28,7 @@ class Profile(db_models.Model):
     mfa_gotp_qurls = db_models.CharField(max_length=255, default='', blank=True)
     update_time = db_models.DateTimeField(auto_now_add=True, blank=True)
     create_time = db_models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
-    id = db_models.CharField(max_length=36, primary_key=True, auto_created=True, default=uuid.uuid4, editable=False)
+    id = db_models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
     avatar = StrictedImageFileField(upload_to=generate_filename('avatars'), sizes=((99, 99),), blank=True)
     operate_protect_intensity = db_models.CharField(max_length=32,
                                                     choices=[('default', 'default'), ('force', 'force')],
