@@ -38,6 +38,7 @@ class Profile(db_models.Model):
                                                  default='email', blank=True)
 
     user = db_models.OneToOneField(auth_models.User)
+    parent = db_models.ForeignKey(auth_models.User, related_name='children', null=True, blank=True)
 
     def __str__(self):
         return self.user.username

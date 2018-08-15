@@ -1,6 +1,9 @@
 ::-webkit-scrollbar{
     display: none;
 }
+select {
+    border: solid 1px #ccc;
+}
 .lf {
     float: left;
 }
@@ -22,10 +25,10 @@
 .link:hover {
     border-bottom: dotted 1px #039;
 }
-.script-results {
+.script-results, .install-script {
     padding: 10px;
 }
-.script-results p {
+.script-results p, .install-script p {
     line-height: 20px;
 }
 .link-underline {
@@ -186,7 +189,7 @@
 
 .body-container .nav-menu {
     color: #333333;
-    border-right:solid 1px #EEEEEE;
+    border-right:solid 1px #eee;
 }
 .body-container .nav-menu .menu-title {
     height: 70px;
@@ -240,7 +243,7 @@
 .body-container .nav-page .nav-page-container .page-body fieldset legend {
     width: 100%;
     line-height: 42px;
-    border-bottom: solid 1px #EEEEEE;
+    border-bottom: solid 1px #ccc;
 }
 .body-container .nav-page .nav-page-container .page-body .form-group {
     line-height: 42px;
@@ -264,6 +267,16 @@
 .body-container .nav-page .nav-page-container .page-body .form-group .form-input .middle-tools {
     padding: 40px 20px 0 20px;
 }
+.body-container .nav-page .nav-page-container .page-body .form-group .form-input .chart-preview .charts-data .chart {
+    width: 828px;
+    height: 300px;
+    padding: 10px;
+    margin: 10px 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    border: solid 1px #ccc;
+}
 .body-container .nav-page .nav-page-container .page-foot {
     margin: 20px 0;
     line-height: 42px;
@@ -273,8 +286,8 @@
 
 .body-container .nav-page .nav-page-container .page-body .user-head {
     padding: 10px 0;
-    border-top: dashed 1px #EEEEEE;
-    border-bottom: dashed 1px #EEEEEE;
+    border-top: dashed 1px #ccc;
+    border-bottom: dashed 1px #ccc;
 }
 .body-container .nav-page .nav-page-container .page-body .user-head .user-image {
     text-align: center;
@@ -289,14 +302,14 @@
 }
 .body-container .nav-page .nav-page-container .page-body .user-detail {
     padding-left:  30px;
-    border-left: dashed 1px #eeeeee;
+    border-left: dashed 1px #ccc;
 }
 .body-container .nav-page .nav-page-container .page-body .user-detail ul li {
     line-height: 35px;
 }
 .body-container .nav-page .nav-page-container .page-body .user-sets {
     padding: 10px 0;
-    border-bottom: dashed 1px #EEEEEE;
+    border-bottom: dashed 1px #ccc;
 }
 .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-title, .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-body, .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-oper {
     line-height: 25px;
@@ -308,7 +321,7 @@
 .body-container .nav-page .nav-page-container .page-body .user-sets .set-item-title {
     width: 150px;
     font-size: 13px;
-    border-right: dashed 1px #EEEEEE;
+    border-right: dashed 1px #ccc;
 }
 
 
@@ -319,8 +332,8 @@
 .avatar-modify .img-select, .avatar-modify .img-preview, .avatar-modify .img-upload {
     height: 110px;
     margin-top: 15px;
-    border: solid 1px #EEEEEE;
-    background-color: #EEEEEE;
+    border: solid 1px #ccc;
+    background-color: #ccc;
 }
 .avatar-modify .img-select {
     width: 345px;
@@ -350,7 +363,7 @@
     margin-top: 20px;
     padding-top: 20px;
     text-align: right;
-    border-top: solid 1px #eeeeee;
+    border-top: solid 1px #ccc;
 }
 .avatar-modify .img-upload span.textbox.filebox {
     margin: 40px 10px;
@@ -382,7 +395,7 @@
 }
 
 .body-container .nav-page .nav-page-container .page-body .list-detail {
-    border-top: solid 1px #eeeeee;
+    border-top: solid 1px #ccc;
 }
 .body-container .nav-page .nav-page-container .page-body .list-detail ul li.list-col {
     width: 49%;
@@ -411,12 +424,12 @@
 .body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-data .chart {
     width: 49%;
     height: 300px;
-    padding: 10px;
     margin: 10px 0;
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-    border: solid 1px #eeeeee;
+    border: solid 1px #ccc;
+    padding: 10px 10px 20px 10px;
 }
 .body-container .nav-page .nav-page-container .page-body .detail-tabs .charts .charts-data .chart .chart-tool {
     color: #999;

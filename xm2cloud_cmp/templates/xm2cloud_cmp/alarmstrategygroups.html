@@ -1,0 +1,89 @@
+{% load static %}
+
+<table id="alarmstrategygroup_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,alarmstrategy_manage = "{% url 'xm2cloud_cmp:alarmstrategy_manage' %}"
+        ,alarmstrategygroup_list = "{% url 'xm2cloud_cmp:alarmstrategygroups' %}"
+        ,alarmstrategygroup_create = "{% url 'xm2cloud_cmp:alarmstrategygroup_create' %}"
+        ,alarmstrategygroup_list_api = "{% url 'xm2cloud_cmp:api_alarmstrategygroup_list' %}"
+        ,alarmstrategygroup_update = "{% url 'xm2cloud_cmp:alarmstrategygroup_update' id=0 %}"
+        ,alarmstrategygroup_delete = "{% url 'xm2cloud_cmp:alarmstrategygroup_delete' id=0 %}"
+        ,alarmstrategygroup_detail = "{% url 'xm2cloud_cmp:alarmstrategygroup_detail' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['alarmstrategygroupSearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click').bind('click', function () {
+            var that = this
+                ,name = $(that).attr('name');
+
+            var options = {}
+                ,selected = $('#alarmstrategygroup_datagrid').datagrid('getSelected');
+            switch (name){
+                case 'add':
+                    options.href = alarmstrategygroup_create;
+                    break;
+                case 'edit':
+                    if(!selected){
+                        options.href = alarmstrategygroup_list;
+                        break;
+                    }
+                    options.href = alarmstrategygroup_update.replace('/0/', '/'+selected.id+'/');
+                    break;
+                case 'del':
+                    if(!selected){
+                        options.href = alarmstrategygroup_list;
+                        break;
+                    }
+                    options.href = alarmstrategygroup_delete.replace('/0/', '/'+selected.id+'/');
+                    break;
+            }
+            $._control('#control', options);
+        });
+        $._datagrid('#alarmstrategygroup_datagrid', {
+            url: alarmstrategygroup_list_api,
+            onLoadSuccess: function (data) {
+                $('.alarmstrategygroup-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'35%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = alarmstrategygroup_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" class="alarmstrategygroup-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'alarmstrategies',width:'10%',title:'策略',sortable:true,align:'center',
+                    formatter: function(value, row, index){
+                        var _t = alarmstrategy_manage+'?alarmstrategygroupId='+row.id+"&navName=rule";
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'update_time',width:'11%',title:'上次修改',sortable:true
+                },
+                {
+                    field:'notes',width:'35%',title:'备注',sortable:true
+                }
+            ]]
+        })
+    })
+</script>

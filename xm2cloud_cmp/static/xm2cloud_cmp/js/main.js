@@ -110,7 +110,6 @@ $._combobox = function (p, options) {
 };
 
 $._editor = function (p, options) {
-    console.log(options);
     options = options || {};
     options.contents = $._default(options, 'contents', '');
     options.folding = $._default(options, 'folding', true);
@@ -141,6 +140,8 @@ $._render = function (p, options) {
     var chart = echarts.init(document.getElementById(p));
     options = options || {};
 
-    chart.setOption(options)
+    chart.setOption(options);
+
+    return chart
 };
 

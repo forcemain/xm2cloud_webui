@@ -99,7 +99,6 @@
                 {
                     field:'target',width:'20%',title:'执行目标',
                     formatter: function(value, row, index){
-                        console.log(row);
                         var target = '';
                         target = (row.cluster_name?row.cluster_name:'')
                                + (row.hostgroup_name?('/'+row.hostgroup_name):'')

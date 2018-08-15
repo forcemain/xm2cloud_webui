@@ -1,380 +1,153 @@
-{% extends 'xm2cloud_cmp/_layout.html' %}
+{% extends 'xm2cloud_cmp/_base.html' %}
 {% load static %}
 
-{% block styles %}
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-tool" region="north" title="<a class='link-underline'>监控大盘</a>" split="false"
+                 border="false" collapsible="false">
+                <div class="nav-tool-container">
+                    <div class="lf left-tools">
+                        <a href="#" data-start="1h-ago" data-downsample="30s-avg-nan" class="period-button easyui-linkbutton button-white normal-button">1小时</a>
+                        <a href="#" data-start="3h-ago" data-downsample="1m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">3小时</a>
+                        <a href="#" data-start="6h-ago" data-downsample="2m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">6小时</a>
+                        <a href="#" data-start="12h-ago" data-downsample="4m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">12小时</a>
+                        <a href="#" data-start="1d-ago" data-downsample="8m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">1天</a>
+                        <a href="#" data-start="3d-ago" data-downsample="24m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">3天</a>
+                        <a href="#" data-start="7d-ago" data-downsample="56m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">7天</a>
+                        <a href="#" data-start="14d-ago" data-downsample="112m-avg-nan" class="period-button easyui-linkbutton button-white normal-button">14天</a>
+                    </div>
+                    <div class="rt right-tools">
+                        <select id="screen_select" name="screen_select" class="easyui-combobox" value="" prompt="--请选择--"
+                                required="true" missingMessage="" data-options="width:'282',height:'26'">
+                        </select>
+                        <a id="create_screen" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'30',height:'26'"><i class="fa fa-plus"></i>
+                        </a>
+                        <a id="update_screen" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'30',height:'26'"><i class="fa fa-edit"></i>
+                        </a>
+                        <a id="delete_screen" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'30',height:'26'"><i class="fa fa-trash"></i>
+                        </a>
+                        <a id="create_target" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'80',height:'26'">图表发布
+                        </a>
+                        <a id="update_target" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'80',height:'26'">图表刷新
+                        </a>
+                        <a id="screen_screen" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                           data-options="width:'80',height:'26'">全屏展示
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-page" region="center" title="" split="false" border="false" id="control"
+                 href="{% url 'xm2cloud_cmp:dashboardscreen_default' %}">
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
     {{ block.super }}
-    <style type="text/css">
-        span.tree-icon.tree-folder, span.tree-icon.tree-file {
-            display: none;
-        }
-    </style>
-{% endblock %}
+    <script type="text/javascript">
+        var fullscreen_num = 0
+            ,screen_select = $('#screen_select')
+            ,create_screen = $('#create_screen')
+            ,update_screen = $('#update_screen')
+            ,delete_screen = $('#delete_screen')
+            ,create_target = $('#create_target')
+            ,screen_screen = $('#screen_screen')
+            ,ajax_csrf_token = "{{ csrf_token }}"
+            ,dashboardscreen_create = "{% url 'xm2cloud_cmp:dashboardscreen_create' %}"
+            ,dashboardscreen_default = "{% url 'xm2cloud_cmp:dashboardscreen_default' %}"
+            ,dashboardscreen_list_api = "{% url 'xm2cloud_cmp:api_dashboardscreen_list' %}"
+            ,dashboardscreen_detail = "{% url 'xm2cloud_cmp:dashboardscreen_detail' id=0 %}"
+            ,dashboardscreen_update = "{% url 'xm2cloud_cmp:dashboardscreen_update' id=0 %}"
+            ,dashboardscreentarget_create = "{% url 'xm2cloud_cmp:dashboardscreentarget_create' %}"
+            ,dashboardscreen_delete_api = "{% url 'xm2cloud_cmp:api_dashboardscreen_delete' id=0 %}";
 
-{% block main_container %}
-<div class="easyui-layout" data-options="fit:true">
-    <div class="fixed-head" data-options="region:'north',border:false">
-        <div class="head-content">
-            <div class="lf active">
-                当前监控大盘:
-                <input id="switch-dashboard" name="dashboard" class="easyui-combotree"
-                       data-options="width:'372px',method:'get',animate:true,lines:true,editable:true" url="{% url 'xm2cloud_cmp:api_dashboardscreen_list' %}">
-            </div>
-            <div class="rt">
-                <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">创建监控大盘</a>
-                <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">修改监控大盘</a>
-                <a href="#" class="easyui-linkbutton button-line-white button-line-unbackground">删除监控大盘</a>
-            </div>
-        </div>
-        <div class="action-content">
-            <div class="lf">
-                <ul>
-                    <li _form="-1h" class="cycle">1小时</li>
-                    <li _form="-3h" class="cycle">3小时</li>
-                    <li _form="-6h" class="cycle">6小时</li>
-                    <li _form="-12h" class="cycle">12小时</li>
-                    <li _form="-1d" class="cycle">1天</li>
-                    <li _form="-3d" class="cycle">3天</li>
-                    <li _form="-7d" class="cycle">7天</li>
-                    <li _form="-14d" class="cycle">14天</li>
-                    <li id="auto_refresh" class="graph-action">自动刷新: <input class="easyui-switchbutton" checked data-options="height:20"></li>
-                    <li id="auto_syncgpt" class="graph-action">图表联动: <input class="easyui-switchbutton" checked data-options="height:20"></li>
-                </ul>
+        $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
 
-            </div>
-            <div class="rt">
-                <a id="add_service_monitor" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">添加业务监控</a>
-                <a id="add_logging_monitor" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">添加日志监控</a>
-                <a id="full_screen" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">全屏</a>
-                <a id="refresh_all" href="#" class="easyui-linkbutton button-line-white button-line-unbackground">
-                    <i class="fa fa-refresh" aria-hidden="true"></i>刷新
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="fixed-body" data-options="region:'center',border:false">
-        <div id="screen_add" class="easyui-window" title=" 添加图表"
-             data-options="border:false,inline:true,collapsible:false,minimizable:false,maximizable:false,closable:true,draggable:false,resizable:false,shadow:true,maximized:true,closed:true">
-            <div class="easyui-layout" data-options="fit:true">
-                <div class="dashboard-charttype-container" data-options="region:'west',width:56">
-                    <div class="charttype-item" type="line">
-                        <div class="tipicon linechart-gray"></div>
-                        <div class="tiptext">折线图</div>
-                    </div>
-                    <div class="charttype-item" type="area">
-                        <div class="tipicon areachart"></div>
-                        <div class="tiptext">面积图</div>
-                    </div>
-                    <div class="charttype-item" type="table">
-                        <div class="tipicon tablechart-gray"></div>
-                        <div class="tiptext">表格域</div>
-                    </div>
-                    <div class="charttype-item" type="hotmap">
-                        <div class="tipicon hotmapchart-gray"></div>
-                        <div class="tiptext">热力图</div>
-                    </div>
-                    <div class="charttype-item" type="pie">
-                        <div class="tipicon piechart-gray"></div>
-                        <div class="tiptext">饼状图</div>
-                    </div>
-		        </div>
-                <div class="dashboard-chartadds-container" data-options="region:'center'">
-                    <div class="easyui-tabs tabs-underline tab-color-grey" data-options="plain:true,border:false">
-                        <div title="业务监控" style="padding: 15px;">
-                            <div class="console-container">
-                                <div class="console-body">
-                                    <fieldset>
-                                        <legend>规则说明</legend>
-                                        <div class="console-form-group">
-                                            <div class="lf form-label text-right">指标方法 : </div>
-                                            <div class="lf form-input">
-                                                <p>
-                                                    <a href="#" class="extranal-link-hover">查看文档</a>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div class="clear"></div>
-                                        <div class="console-form-group">
-                                            <div class="lf form-label text-right">指标规范 : </div>
-                                            <div class="lf form-input">
-                                                <p>
-                                                    <span class="font-grayish">Ip</span>.
-                                                    <span class="font-grayish">Cluster</span>.
-                                                    <span class="font-grayish">Hostgroup</span>.
-                                                    <span class="font-grayish">Namespace</span>.
-                                                    <span class="font-grayish">Instrumented Section</span>.
-                                                    <span class="font-grayish">Target (noun)</span>.
-                                                    <span class="font-grayish">Action (past tense verb)</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div class="clear"></div>
-                                    </fieldset>
-                                    <fieldset>
-                                        <legend>聚合图表</legend>
-                                        <div class="lf form-input">
-                                            <div id="chat_graph"></div>
-                                        </div>
-                                    </fieldset>
-                                    <fieldset>
-                                        <legend>添加指标</legend>
-                                        <div class="console-form-group cellspacing-5">
-                                            <div class="lf form-label text-right">TARGET : </div>
-                                            <div class="lf form-input">
-                                                <div id="graph_targets">
-                                                    <div class="graph-targets">
-                                                        <div class="lf target-title">2</div>
-                                                        <a href="#" class="target-action easyui-linkbutton" data-options="width:58,height:32">删除</a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="clear"></div>
-                                        <div class="console-form-group cellspacing-5">
-                                            <div class="lf form-label text-right">规则定义 : </div>
-                                            <div class="lf form-input">
-                                                <input id="graph_express" class="easyui-combobox" data-options="width:600,height:32,required:true,missingMessage:''">
-                                                </input>
-                                            </div>
-                                        </div>
-                                        <div class="clear"></div>
-                                        <div class="console-form-group cellspacing-5">
-                                            <div class="lf form-label text-right">规则别名 : </div>
-                                            <div class="lf form-input">
-                                                <input id="graph_label" class="easyui-textbox" name="graph_label" data-options="width:540,height:32,required:true,missingMessage:''">
-                                                </input>
-                                                <a id="add_graph" href="#" class="easyui-linkbutton" data-options="width:58,height:32">添加</a>
-                                            </div>
-                                        </div>
-                                        <div class="clear"></div>
-                                    </fieldset>
-                                </div>
-                                <div class="console-tools">
-                                    <a id="publish" href="#" class="easyui-linkbutton" data-options="width:58,height:32">发布</a>
-                                    <a id="cancels" href="#" class="easyui-linkbutton" data-options="width:58,height:32">取消</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div title="日志监控">
-                            暂未开放, 正开发中
-                        </div>
-                    </div>
-		        </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts%}
-{{ block.super }}
-<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/dygraph/dygraph.min.js' %}"></script>
-<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/dygraph/synchronizer.js' %}"></script>
-<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/main.js' %}"></script>
-<script type="text/javascript" src="{% static 'xm2cloud_cmp/../../static/xm2cloud_cmp/js/date.js' %}"></script>
-<script type="text/javascript">
-    var graphite_targets = []
-        ,render_url = "{{ render_url }}"
-        ,finder_url = "{{ finder_url }}"
-        ,ajax_csrf_token = "{{ csrf_token }}";
-
-    // for auto load csrf_token
-    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
-
-    // for reload metric graph data
-    function reload_metric_graph_data(e, parameter) {
-        var json_url = render_url+'?'
-            ,parameter = parameter?parameter:{};
-
-        if(!parameter['noNullPoints']) parameter['noNullPoints'] = 'true';
-        if(!parameter['format']) parameter['format'] = 'dygraph';
-        if(!parameter['target']) parameter['target'] = e.id;
-        if(!parameter['width']) parameter['width'] = $(e).parent().width();
-        if(!parameter['from']) parameter['from'] = '-1h';
-
-        for(var p in parameter){
-            if(parameter[p] instanceof Array){
-                for(var i=0;i<parameter[p].length;i++){
-                    var v = parameter[p][i];
-                    json_url += '&' + p + '=' + v;
-                }
-            }else {
-                json_url += '&' + p + '=' + parameter[p];
-            }
-        }
-        $.ajax({
-            type: 'GET',
-            url: json_url,
-            dataType: 'json',
-            success: function (data) {
-                if(!Object.keys(data).length){
-                    $(e).html('');
-                    return;
-                }
-                new Dygraph(e, data.data, {
-                    width: $(e).parent().width(),
-                    strokeWidth: 1,
-                    animatedZooms: true,
-                    highlightCircleSize: 3,
-                    fillGraph: true,
-                    rollPeriod: 1,
-                    legend: 'onmouseover',
-                    labels: data.labels,
-                    labelsSeparateLines: true,
-                    axes: {
-                        x: {
-                            valueFormatter: function(ts) {
-                                return to_strdatetime(ts);
-                            },
-                            axisLabelFormatter: function(ts) {
-                                return to_strtime(ts);
-                            }
+        function load_dashboardscreen(p, options) {
+            options = options || {};
+            var select = $._default(options, 'select', '');
+            $._ajax({
+                type: 'GET',
+                url: dashboardscreen_list_api,
+                traditional: true,
+                error_width: 501,
+                beforeSend: function (XHR) {
+                },
+                success: function (data) {
+                    $.map(data.rows, function (o, i) {
+                        if(o.name==select) data.rows[i]['selected'] = true;
+                    });
+                    $._combobox(p, {
+                        disabled: false,
+                        onChange: function (newval) {
+                            var screen = newval || oldval;
+                            var dashboardscreen_detail_href = dashboardscreen_detail.replace('/0/', '/'+screen+'/');
+                            $._control('#control', {href: dashboardscreen_detail_href});
                         },
-                        y: {
-                            valueFormatter: function (y) {
-                                switch(e.id){
-                                    case 'cpu':
-                                        return y.toFixed(2)+' %';
-                                        break;
-                                    case 'mem':
-                                        return y.toFixed(2)+' %';
-                                        break;
-                                    case 'band':
-                                        return (y/1024).toFixed(2)+' M';
-                                        break;
-                                    default:
-                                        return y.toFixed(2)+' ';
-                                        break;
-                                }
-                            },
-                            axisLabelFormatter: function(y) {
-                                switch(e.id){
-                                    case 'cpu':
-                                        return y.toFixed(2)+' ';
-                                        break;
-                                    case 'mem':
-                                        return y.toFixed(2)+' ';
-                                        break;
-                                    case 'band':
-                                        return (y/1024).toFixed(2);
-                                        break;
-                                    default:
-                                        return y.toFixed(2)+' ';
-                                        break;
-                                }
-                            }
-
+                        onClick: function (record) {
+                            var dashboardscreen_detail_href = dashboardscreen_detail.replace('/0/', '/'+record.id+'/');
+                            $._control('#control', {href: dashboardscreen_detail_href});
                         }
+                    });
+                    screen_select.combobox('loadData', data.rows);
+                },
+                complete: function () {
+                }
+            });
+        }
+        
+        $(function () {
+            load_dashboardscreen('#screen_select');
+            create_screen.unbind('click').bind('click', function () {
+                $._control('#control', {href: dashboardscreen_create});
+            });
+            update_screen.unbind('click').bind('click', function () {
+                var select_screen = screen_select.combobox('getValue');
+                if(!select_screen) return;
+                var dashboardscreen_update_href = dashboardscreen_update.replace('/0/', '/'+select_screen+'/');
+                $._control('#control', {href: dashboardscreen_update_href});
+            });
+            delete_screen.unbind('click').bind('click', function () {
+                var select_screen = screen_select.combobox('getValue');
+                if(!select_screen) return;
+                var dashboardscreen_delete_url = dashboardscreen_delete_api.replace('/0/', '/'+select_screen+'/');
+                $._ajax({
+                    type: 'POST',
+                    url: dashboardscreen_delete_url,
+                    traditional: true,
+                    error_width: 501,
+                    beforeSend: function (XHR) {
+                    },
+                    success: function (data) {
+                        load_dashboardscreen('#screen_select');
+                    },
+                    complete: function () {
+                        $._control('#control', {href: dashboardscreen_default});
                     }
                 });
-            }
-        });
-    }
-
-    // for init graph express
-    function init_graph_express() {
-        $('#graph_express').combobox({
-            method: 'get',
-            url: finder_url,
-            mode: 'remote',
-            valueField: 'id',
-            textField: 'text',
-            loadFilter: function (data) {
-                var filtered_data = $.map(data, function (item, index) {
-                    return {'id': item.id, 'text': item.id+'.'}
-                });
-
-                return filtered_data;
-            },
-            onClick: function (record) {
-                // maybe you want to use with tags
-                console.log(record);
-            }
-        });
-    }
-
-    // for init add monitor handler
-    function init_add_monitor() {
-        $('#add_service_monitor').linkbutton({
-            onClick: function () {
-                $('#screen_add').window('open');
-            }
-        });
-        $('#add_logging_monitor').linkbutton({
-            onClick: function () {
-                $('#screen_add').window('open');
-            }
-        })
-    }
-
-    // for init switch chattype
-    function init_switch_charttype(){
-        $('div.charttype-item').on('click', function () {
-            var type = $(this).attr('type');
-            var new_cls = type+'chart';
-            var old_cls = type+'chart-gray';
-            $(this).find('div.tipicon').removeClass(old_cls).addClass(new_cls).end().siblings().each(function () {
-                type = $(this).attr('type');
-                new_cls = type+'chart';
-                old_cls = type+'chart-gray';
-                $(this).find('div.tipicon').removeClass(new_cls).addClass(old_cls);
+            });
+            create_target.unbind('click').bind('click', function () {
+                var select_screen = screen_select.combobox('getValue');
+                if(!select_screen) return;
+                $._control('#control', {href: dashboardscreentarget_create});
+            });
+            screen_screen.unbind('click').bind('click', function () {
+                fullscreen_num++;
+                fullscreen_num%2==1?enter_fullscreen('control'):exit_fullscreen();
             })
         })
-    }
-
-    // for init del custom graph handler
-    function init_del_custom_graph() {
-        $('#graph_targets').tagbox({
-            onBeforeRemoveTag: function (value) {
-                var parameter = {'target': []}
-                    ,graph_targets = $(this).tagbox('getValues');
-                graph_targets.remove(value);
-
-                parameter['target'] = graph_targets;
-                reload_metric_graph_data($('#chat_graph')[0], parameter);
-
-                return true;
-            }
-        });
-    }
-
-    // for init add custom graph handler
-    function init_add_custom_graph() {
-        $('#add_graph').linkbutton({
-            onClick: function () {
-                var graph_label = $('#graph_label').textbox('getValue')
-                    ,graph_express = $('#graph_express').combobox('getValue');
-                graphite_targets.remove(graph_express);
-                graphite_targets.push(graph_express);
-
-                // for add target action
-                var html = '';
-                $.each(graphite_targets, function (index, item) {
-                    html +='<div class="graph-targets"><div class="lf target-title">'
-                         + item+'</div><a href="#" class="target-action easyui-linkbutton" data-options="width:58,height:32">'
-                         + '删除</a></div>'
-                });
-                $('#graph_targets').html(html);
-
-                reload_metric_graph_data($('#chat_graph')[0], {target: graphite_targets});
-            }
-        })
-    }
-
-    $(function () {
-        // for init add monitor handler
-        init_add_monitor();
-
-        // for init switch chattype
-        init_switch_charttype();
-
-        // for init graph express
-        init_graph_express();
-
-        // for init del graph handler
-        init_del_custom_graph()
-
-        // for init add graph handler
-        init_add_custom_graph()
-    });
-</script>
+    </script>
 {% endblock %}

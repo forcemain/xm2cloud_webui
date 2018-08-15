@@ -14,7 +14,7 @@ from . import host_post_save, hostgroup_post_save, cluster_post_save
 from ..models import TimedTask, Host, HostGroup, Cluster, ScriptLog, UpdateLog
 
 
-@receiver(post_delete, sender=ScriptLog)
+@receiver(pre_delete, sender=ScriptLog)
 def script_log_delete(sender, instance, **kwargs):
     event_id, host_id = instance.sevent_uuid, instance.host.pk
 
@@ -25,7 +25,7 @@ def script_log_delete(sender, instance, **kwargs):
     ])
 
 
-@receiver(post_delete, sender=UpdateLog)
+@receiver(pre_delete, sender=UpdateLog)
 def update_log_delete(sender, instance, **kwargs):
     event_id, host_id = instance.sevent_uuid, instance.host.pk
 
@@ -42,7 +42,7 @@ def timedtask_save_change(instance, **kwargs):
     pre_save.send(sender=PeriodicTask, instance=instance)
 
 
-@receiver(post_delete, sender=TimedTask)
+@receiver(pre_delete, sender=TimedTask)
 def timedtask_delete_change(instance, **kwargs):
     instance.no_changes = False
     pre_delete.send(sender=PeriodicTask, instance=instance)
@@ -54,7 +54,7 @@ def host_save_change(instance, **kwargs):
     func.delay(owner=instance.owner.pk, host=instance.pk)
 
 
-@receiver(post_delete, sender=Host)
+@receiver(pre_delete, sender=Host)
 def host_delete_change(instance, **kwargs):
     pass
 
@@ -64,7 +64,7 @@ def cluster_save_change(instance, before_hostgroup_set, after_hostgroup_set, **k
     pass
 
 
-@receiver(post_delete, sender=Cluster)
+@receiver(pre_delete, sender=Cluster)
 def cluster_delete_change(instance, **kwargs):
     pass
 
@@ -76,6 +76,6 @@ def hostgroup_save_change(instance, before_host_set, after_host_set, **kwargs):
     map(lambda h: func.delay(owner=instance.owner.pk, host=h), hosts)
 
 
-@receiver(post_delete, sender=HostGroup)
+@receiver(pre_delete, sender=HostGroup)
 def hostgroup_delete_change(instance, **kwargs):
     pass

@@ -61,7 +61,6 @@
 
 <script type="text/javascript">
     var ajax_csrf_token = "{{ csrf_token }}"
-        ,timedtask_create = "{% url 'xm2cloud_cmp:timedtask_create' %}"
         ,crontab_create_api = "{% url 'xm2cloud_cmp:api_crontab_create' %}";
 
 
@@ -93,9 +92,8 @@
                     traditional: true,
                     error_width: 501,
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
-                        $._control('#control', {href: timedtask_create});
+                        $._control('#control', {href: control_page});
                     },
                     complete: function () {
                         $(that).find('span:last').html(_html);
@@ -109,7 +107,7 @@
         });
         $('#goback_timedtask').linkbutton({
             onClick: function () {
-                $._control('#control', {href: timedtask_create});
+                $._control('#control', {href: control_page});
             }
         });
     })

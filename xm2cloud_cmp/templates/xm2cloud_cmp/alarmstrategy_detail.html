@@ -1,0 +1,26 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>策略[ {{ object.name }} ]</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_alarmstrategy" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var alarmstrategy_list = "{% url 'xm2cloud_cmp:alarmstrategies' %}";
+
+    $('#goback_alarmstrategy').linkbutton({
+        onClick: function () {
+            $._control('#control', {href: control_page});
+        }
+    });
+</script>

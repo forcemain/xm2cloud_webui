@@ -1,6 +1,7 @@
 {% load static %}
 
 <table id="host_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+<div id="install_guide" class="easyui-window" closed="true" title="安装脚本"></div>
 
 <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
 <script type="text/javascript">
@@ -12,6 +13,7 @@
         ,host_detail = "{% url 'xm2cloud_cmp:host_detail' id=0 %}"
         ,host_update = "{% url 'xm2cloud_cmp:host_update' id=0 %}"
         ,host_delete = "{% url 'xm2cloud_cmp:host_delete' id=0 %}"
+        ,agent_install = "{% url 'xm2cloud_cmp:agent_install' id=0 %}"
         ,hostgroup_manage = "{% url 'xm2cloud_cmp:hostgroup_manage' %}";
 
     $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
@@ -72,15 +74,19 @@
                                 break;
                             case 'gray_release':
                                 alert('灰度发布: '+item.id);
-                                break
+                                break;
                         }
                     });
                 });
-
                 $('.host-detail').unbind('click').bind('click', function () {
                     var _t = $(this).attr('_t');
                     $._control('#control', {href: _t});
                 });
+                $('.agent-install').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    agent_install_href = agent_install.replace('/0/', '/'+_t+'/');
+                    $._window('#install_guide', {href: agent_install_href});
+                })
             },
             queryParams: get_query_params(),
             columns:[[
@@ -137,9 +143,9 @@
                     formatter: function(value, row, index){
                         var version = '';
                         if(row.is_running){
-                            version = '<a class="link-underline font-green">'+row.agentstate.version+'</a>';
+                            version = '<a _t="'+row.id+'" class="agent-install link-underline font-green">'+row.agentstate.version+'</a>';
                         }else{
-                            version = '<a class="link-underline font-red">待安装</a>';
+                            version = '<a _t="'+row.id+'" class="agent-install link-underline font-red">待安装</a>';
                         }
                         return version;
                     }

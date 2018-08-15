@@ -9,7 +9,7 @@
     <div class="head-menu lf">
         <ul>
             <li class="dropdown-menu">
-                <a href="#">资源概览</a>
+                <a href="{% url 'xm2cloud_cmp:home' %}">资源概览</a>
             </li>
             <li class="dropdown-menu">
                 <a href="{% url 'xm2cloud_cmp:cluster_manage'%}">集群管理</a>
@@ -47,8 +47,9 @@
             <li class="dropdown-menu" _t="monitor_alert">
                 <a href="#">监控告警 <i class="fa fa-angle-down"></i></a>
                 <div id="monitor_alert" class="easyui-menu">
-                    <div><a href="#">监控大盘</a></div>
-                    <div><a href="#">告警策略</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:dashboard' %}">监控大盘</a></div>
+                    <div><a href="#">消息通知</a></div>
+                    <div><a href="{% url 'xm2cloud_cmp:alarmstrategy_manage' %}">告警策略</a></div>
                     <div><a href="#">周期报表</a></div>
                 </div>
             </li>

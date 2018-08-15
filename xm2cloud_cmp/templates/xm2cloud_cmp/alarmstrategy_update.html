@@ -1,0 +1,503 @@
+{% load static %}
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认新增 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">
+                    <input id="name" name="name" class="easyui-textbox" value="{{ object.name }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes" name="notes" class="easyui-textbox" value="{{ object.notes }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">启用 : </div>
+                <div class="lf form-input"><input id="enabled" name="enabled" type="checkbox" {% if object.enabled %}checked{% endif %}></div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">重要等级 : </div>
+                <div class="lf form-input">
+                    <select id="grade_select" name="grade_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            data-options="width:'380',height:'32'">
+                        <option value="1" {% if object.grade == 1 %}selected{% endif %}>提示</option>
+                        <option value="2" {% if object.grade == 2 %}selected{% endif %}>次要</option>
+                        <option value="3" {% if object.grade == 3 %}selected{% endif %}>重要</option>
+                        <option value="4" {% if object.grade == 4 %}selected{% endif %}>紧急</option>
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联主题 : </div>
+                <div class="lf form-input">
+                    <select id="topic_select" name="topic_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">周期计划 : </div>
+                <div class="lf form-input">
+                    <select id="crontab_select" name="crontab_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'282',height:'32'">
+                    </select>
+                    <a id="create_crontab" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-plus"></i>
+                    </a>
+                    <a id="update_crontab" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-edit"></i>
+                    </a>
+                    <a id="delete_crontab" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-trash"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">间隔计划 : </div>
+                <div class="lf form-input">
+                    <select id="interval_select" name="interval_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'282',height:'32'">
+                    </select>
+                    <a id="create_interval" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-plus"></i>
+                    </a>
+                    <a id="update_interval" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-edit"></i>
+                    </a>
+                    <a id="delete_interval" href="#" class="tool-button easyui-linkbutton button-white normal-button"
+                       data-options="width:'30',height:'32'">
+                        <i class="fa fa-trash"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">策略属组: </div>
+                <div class="lf form-input">
+                    <select id="alarmstrategygroup_select" name="alarmstrategygroup_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">定义规则 : </div>
+                <div class="lf form-input">
+                    <div class="editor-area">
+                        <pre id="rules_editor" class="ace_editor"><textarea class="ace_text-input">{{ object.rules }}</textarea></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联集群 : </div>
+                <div class="lf form-input">
+                    <select id="cluster_select" name="cluster_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" required="true" missingMessage="" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联群组 : </div>
+                <div class="lf form-input">
+                    <select id="hostgroup_select" name="hostgroup_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联主机 : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="left_search" name="left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="left_select" class="left-select" multiple="multiple">
+                            {% for host in hosts %}
+                                <option value="{{ host.pk }}">{{ host.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="right_search" name="right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="right_select" class="right-select" multiple="multiple">
+                            {% for host in object.hosts.all %}
+                                <option value="{{ host.pk }}">{{ host.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_alarmstrategy" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="create_alarmstrategy" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ace.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ext-language_tools.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,selected_id = "{{ object.sevent_uuid }}"
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,crontab_create = "{% url 'xm2cloud_cmp:crontab_create' %}"
+        ,interval_create = "{% url 'xm2cloud_cmp:interval_create' %}"
+        ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+        ,crontab_list_api = "{% url 'xm2cloud_cmp:api_crontab_list' %}"
+        ,crontab_update = "{% url 'xm2cloud_cmp:crontab_update' id=0 %}"
+        ,crontab_delete = "{% url 'xm2cloud_cmp:crontab_delete' id=0 %}"
+        ,alarmstrategy_list = "{% url 'xm2cloud_cmp:alarmstrategies' %}"
+        ,interval_list_api = "{% url 'xm2cloud_cmp:api_interval_list' %}"
+        ,interval_update = "{% url 'xm2cloud_cmp:interval_update' id=0 %}"
+        ,interval_delete = "{% url 'xm2cloud_cmp:interval_delete' id=0 %}"
+        ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
+        ,messagetopic_list_api = "{% url 'xm2cloud_cmp:api_messagetopic_list' %}"
+        ,alarmstrategy_update_api = "{% url 'xm2cloud_cmp:api_alarmstrategy_update' slug=0 %}"
+        ,alarmstrategygroup_list_api = "{% url 'xm2cloud_cmp:api_alarmstrategygroup_list' %}";
+    var control_page = "{% url 'xm2cloud_cmp:alarmstrategy_update' slug=0 %}".replace('/0/', '/' + selected_id + '/');
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var e = $._editor('rules_editor', {
+            language: 'json'
+        });
+        var _html
+            ,_load
+            ,left_select = $('#left_select')
+            ,right_select = $('#right_select');
+        $('#l2r').linkbutton({
+            onClick: function () {
+                left_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(right_select);
+                    }
+                })
+            }
+        });
+        $('#r2l').linkbutton({
+            onClick: function () {
+                right_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(left_select);
+                    }
+                })
+            }
+        });
+        $('#left_search').textbox({
+            onChange: function (newValue, oldValue) {
+                left_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#right_search').textbox({
+            onChange: function (newValue, oldValue) {
+                right_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        var topic_selected = "{{ object.topic.pk }}"
+            ,crontab_selected = "{{ object.crontab.pk }}"
+            ,interval_selected = "{{ object.interval.pk }}"
+            ,alarmstrategygroup_selected = "{{ object.alarmstrategygroup.pk }}";
+        var name_box = $('#name')
+            ,notes_box = $('#notes')
+            ,enabled_box = $('#enabled')
+            ,topic_select = $('#topic_select')
+            ,grade_select = $('#grade_select')
+            ,cluster_select = $('#cluster_select')
+            ,crontab_select = $('#crontab_select')
+            ,create_crontab = $('#create_crontab')
+            ,update_crontab = $('#update_crontab')
+            ,delete_crontab = $('#delete_crontab')
+            ,interval_select = $('#interval_select')
+            ,create_interval = $('#create_interval')
+            ,update_interval = $('#update_interval')
+            ,delete_interval = $('#delete_interval')
+            ,hostgroup_select = $('#hostgroup_select')
+            ,create_alarmstrategy = $('#create_alarmstrategy')
+            ,alarmstrategygroup_select = $('#alarmstrategygroup_select');
+        $._ajax({
+            type: 'GET',
+            url: messagetopic_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#topic_select', {
+                    disabled: false
+                });
+                topic_select.combobox('loadData', data.rows);
+                topic_select.combobox('select', topic_selected)
+            }
+        });
+        $._ajax({
+            type: 'GET',
+            url: alarmstrategygroup_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#alarmstrategygroup_select', {
+                    disabled: false
+                });
+                alarmstrategygroup_select.combobox('loadData', data.rows);
+                alarmstrategygroup_select.combobox('select', alarmstrategygroup_selected);
+            }
+        });
+        $._ajax({
+            type: 'GET',
+            url: crontab_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#crontab_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        interval_select.combobox('clear');
+                    },
+                    formatter: function (row) {
+                        var notes = "分 时 日 月 周"
+                            ,hour = row.hour
+                            ,minute = row.minute
+                            ,day_of_week = row.day_of_week
+                            ,day_of_month = row.day_of_month
+                            ,month_of_year = row.month_of_year;
+                        return '<span>'+minute+' '+hour+' '+day_of_week+' '+day_of_month+' '+month_of_year+'</span><br/><span style="color:#888">'+notes +'</span>';
+                    }
+                });
+                crontab_select.combobox('loadData', data.rows);
+                crontab_select.combobox('select', crontab_selected);
+            },
+            complete: function () {
+            }
+        });
+        $._ajax({
+            type: 'GET',
+            url: interval_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#interval_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        crontab_select.combobox('clear');
+                    },
+                    formatter: function (row) {
+                        var notes = '每';
+                        switch(row.period){
+                            case 'days':
+                                notes += '天';
+                                break;
+                            case 'hours':
+                                notes += '小时';
+                                break;
+                            case 'minutes':
+                                notes += '分钟';
+                                break;
+                            case 'seconds':
+                                notes += '秒';
+                                break;
+                            case 'microseconds':
+                                notes += '毫秒';
+                                break
+                        }
+                        notes += '执行一次';
+                        return '<span>'+row.every+' '+row.period+'</span><br/><span style="color:#888">'+notes +'</span>';
+                    }
+                });
+                interval_select.combobox('loadData', data.rows);
+                interval_select.combobox('select', interval_selected);
+            },
+            complete: function () {
+            }
+        });
+        $._ajax({
+            type: 'GET',
+            url: cluster_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#cluster_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        hostgroup_select.combobox('clear');
+                        $._ajax({
+                            type: 'GET',
+                            url: hostgroup_list_api+'?clusterId='+record.id,
+                            traditional: true,
+                            error_width: 501,
+                            beforeSend: function (XHR) {
+                            },
+                            success: function (data) {
+                                $._combobox('#hostgroup_select', {
+                                    disabled: false,
+                                    onSelect: function (record) {
+                                        left_select.empty();
+                                        $._ajax({
+                                            type: 'GET',
+                                            url: host_list_api + '?hostgroupId=' + record.id,
+                                            traditional: true,
+                                            error_width: 501,
+                                            beforeSend: function (XHR) {
+                                            },
+                                            success: function (data){
+                                                left_select.empty();
+                                                for(var i=0; i<data.rows.length; i++){
+                                                    var c=data.rows[i];
+                                                    var l=left_select.find('option[value="'+c.id+'"]');
+                                                    var r=right_select.find('option[value="'+c.id+'"]');
+                                                    if(l.length || r.length) continue;
+                                                    left_select.append('<option value="'+c.id+'">'+c.name+'</option>');
+                                                }
+                                            },
+                                            complete: function () {
+                                            }
+                                        })
+                                    },
+                                    onLoadSuccess: function (){
+                                    }
+                                });
+                                hostgroup_select.combobox('loadData', data.rows);
+                            },
+                            complete: function () {
+                            }
+                        })
+                    },
+                    onLoadSuccess: function () {
+                    }
+                });
+                cluster_select.combobox('loadData', data.rows);
+            },
+            complete: function () {
+            }
+        });
+        create_crontab.unbind('click').bind('click', function () {
+            $._control('#control', {href: crontab_create});
+        });
+        update_crontab.unbind('click').bind('click', function (){
+            var crontab = crontab_select.combobox('getValue');
+            if(!crontab) return false;
+            $._control('#control', {href: crontab_update.replace('/0/', '/' + crontab + '/')});
+        });
+        delete_crontab.unbind('click').bind('click', function () {
+            var crontab = crontab_select.combobox('getValue');
+            if(!crontab) return false;
+            $._control('#control', {href: crontab_delete.replace('/0/', '/' + crontab + '/')});
+        });
+        create_interval.unbind('click').bind('click', function () {
+            $._control('#control', {href: interval_create});
+        });
+        update_interval.unbind('click').bind('click', function () {
+            var interval = interval_select.combobox('getValue');
+            if(!interval) return false;
+            $._control('#control', {href: interval_update.replace('/0/', '/' + interval + '/')});
+        });
+        delete_interval.unbind('click').bind('click', function () {
+            var interval = interval_select.combobox('getValue');
+            if(!interval) return false;
+            $._control('#control', {href: interval_delete.replace('/0/', '/' + interval + '/')});
+        });
+        create_alarmstrategy.linkbutton({
+            onClick: function () {
+                var that = this
+                    ,rules = e.getValue()
+                    ,name = name_box.textbox('getValue')
+                    ,enabled = enabled_box.is(':checked')
+                    ,notes = notes_box.textbox('getValue')
+                    ,grade = grade_select.combobox('getValue')
+                    ,topic = topic_select.combobox('getValue')
+                    ,crontab = crontab_select.combobox('getValue')
+                    ,interval = interval_select.combobox('getValue')
+                    ,alarmstrategygroup = alarmstrategygroup_select.combobox('getValue')
+                    ,hosts = right_select.find('option:visible').map(function(){return $(this).val()}).get();
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var alarmstrategy_update_url = alarmstrategy_update_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: alarmstrategy_update_url,
+                    traditional: true,
+                    error_width: 501,
+
+                    success: function (data) {
+                        // location.href = data.next;
+                        $._control('#control', {href: alarmstrategy_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        name: name, interval: interval, crontab: crontab, enabled: enabled, rules: rules, notes: notes,
+                        grade: grade, hosts: hosts, topic: topic, alarmstrategygroup: alarmstrategygroup
+                    }
+                })
+            }
+        });
+        $('#goback_alarmstrategy').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: alarmstrategy_list});
+            }
+        });
+    })
+</script>
+
+
+

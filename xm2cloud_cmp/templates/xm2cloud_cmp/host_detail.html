@@ -77,34 +77,34 @@
                     <div class="charts-data">
                         <div class="chart lf">
                             <div class="chart-tool">
-                                <div class="title lf">CPU空闲率(%)</div>
+                                <div class="title lf">CPU使用率(单位: %)</div>
                                 <div class="tools rt"></div>
                                 <div class="clear"></div>
                             </div>
-                            <div id="cpu.idle" class="chart-data">
+                            <div id="cpu.used.percentage" class="chart-data">
                             </div>
                         </div>
                         <div class="chart rt">
                             <div class="chart-tool">
-                                <div class="title lf">NET入流量(B)</div>
+                                <div class="title lf">MEM使用率(单位: %)</div>
+                                <div class="tools rt"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="mem.memused.percentage" class="chart-data">
+                            </div>
+                        </div>
+                        <div class="chart lf">
+                            <div class="chart-tool">
+                                <div class="title lf">NET入流量(单位: M)</div>
                                 <div class="tools rt"></div>
                                 <div class="clear"></div>
                             </div>
                             <div id="net.if.in.bytes.persec" class="chart-data">
                             </div>
                         </div>
-                        <div class="chart lf">
-                            <div class="chart-tool">
-                                <div class="title lf">NET错误包(个)</div>
-                                <div class="tools rt"></div>
-                                <div class="clear"></div>
-                            </div>
-                            <div id="net.if.out.packets.error" class="chart-data">
-                            </div>
-                        </div>
                         <div class="chart rt">
                             <div class="chart-tool">
-                                <div class="title lf">NET出流量(B)</div>
+                                <div class="title lf">NET出流量(单位: M)</div>
                                 <div class="tools rt"></div>
                                 <div class="clear"></div>
                             </div>
@@ -113,29 +113,20 @@
                         </div>
                         <div class="chart lf">
                             <div class="chart-tool">
-                                <div class="title lf">PPS入包率(个)</div>
+                                <div class="title lf">CUR进程数(单位: 个)</div>
                                 <div class="tools rt"></div>
                                 <div class="clear"></div>
                             </div>
-                            <div id="net.if.in.packets.persec" class="chart-data">
+                            <div id="procs.running" class="chart-data">
                             </div>
                         </div>
                         <div class="chart rt">
                             <div class="chart-tool">
-                                <div class="title lf">MEM剩余量(B)</div>
+                                <div class="title lf">DFS使用率(单位: %)</div>
                                 <div class="tools rt"></div>
                                 <div class="clear"></div>
                             </div>
-                            <div id="mem.memfree" class="chart-data">
-                            </div>
-                        </div>
-                        <div class="chart lf">
-                            <div class="chart-tool">
-                                <div class="title lf">DFS剩余量(B)</div>
-                                <div class="tools rt"></div>
-                                <div class="clear"></div>
-                            </div>
-                            <div id="df.bytes.free" class="chart-data">
+                            <div id="df.bytes.used.percentage" class="chart-data">
                             </div>
                         </div>
                     </div>
@@ -151,6 +142,7 @@
     </div>
 </div>
 
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/enhance.js' %}"></script>
 <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/datetime.js' %}"></script>
 <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/echarts.common.min.js' %}"></script>
 <script type="text/javascript">
@@ -158,9 +150,14 @@
         ,host_list = "{% url 'xm2cloud_cmp:hosts' %}"
         ,monitor_metrics_query_api = "{% url 'xm2cloud_cmp:api_monitor_metrics_query' %}";
 
+
     function renderer_chars() {
         var start = arguments[0]
             ,downsample = arguments[1];
+        var _formater_map = {
+            'v_map': {},
+            't_map': {}
+        };
         $.each(arguments, function (k, v) {
             if(k < 2) return;
             var data = {
@@ -168,122 +165,74 @@
                 start: start,
                 msResolution: true
             };
+            var _metric_tag
+                ,_metrictags = {}
+                ,_aggregator = 'avg';
             switch (v){
-                case 'cpu.idle':
-                    data['queries'].push({
-                        aggregator: 'avg',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                case 'cpu.used.percentage':
+                    _aggregator = 'avg';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v;
+                    };
                     break;
-                case 'mem.memfree':
-                    data['queries'].push({
-                        aggregator: 'avg',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
-                    break;
-                case 'df.bytes.free':
-                    data['queries'].push({
-                        aggregator: 'min',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                case 'mem.memused.percentage':
+                    _aggregator = 'avg';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v;
+                    };
                     break;
                 case 'net.if.in.bytes.persec':
-                    data['queries'].push({
-                        aggregator: 'max',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                    _aggregator = 'avg';
+                    _metric_tag = 'iface';
+                    _metrictags[_metric_tag] = '*';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v/1024/1024;
+                    };
                     break;
                 case 'net.if.out.bytes.persec':
-                    data['queries'].push({
-                        aggregator: 'max',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                    _aggregator = 'avg';
+                    _metric_tag = 'iface';
+                    _metrictags[_metric_tag] = '*';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v/1024/1024;
+                    };
                     break;
-                case 'net.if.out.packets.error':
-                    data['queries'].push({
-                        aggregator: 'max',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                case 'procs.running':
+                    _aggregator = 'avg';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v;
+                    };
                     break;
-                case 'net.if.in.packets.persec':
-                    data['queries'].push({
-                        aggregator: 'max',
-                        metric: v,
-                        downsample: downsample,
-                        filters: [
-                            {
-                                type: 'literal_or',
-                                tagk: 'uuid',
-                                filter: selected_id,
-                                groupBy: false
-                            }
-                        ]
-                    });
+                case 'df.bytes.used.percentage':
+                    _aggregator = 'avg';
+                    _metric_tag = 'mount';
+                    _metrictags[_metric_tag] = '*';
+                    _formater_map['v_map'][v] = function (v) {
+                        return v;
+                    };
                     break;
             }
-
+            _metrictags['uuid'] = selected_id;
+            data['queries'].push({
+                aggregator: _aggregator,
+                metric: v,
+                tags: _metrictags,
+                downsample: downsample
+            });
             var options = {
                 data: JSON.stringify(data),
                 error_width: 501,
                 url: monitor_metrics_query_api,
                 success: function (data) {
-                    var m = {};
+                    var series = []
+                        ,xaxis = {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: []
+                    };
                     for(var i = 0; i<data.length; i++){
                         var c = data[i];
+                        _formater_map['t_map'][c.metric] = _metric_tag?(c.metric+' '+c.tags[_metric_tag].cut(20)):c.metric;
                         if(c.error) continue;
                         var x_cur = [];
                         var y_cur = [];
@@ -298,69 +247,46 @@
                             var c_v = c.dps[skeys[j]];
                             var c_k = DateUtil.dateToStr('MM-dd HH:mm:ss', new Date(parseInt(skeys[j])));
                             x_cur.push(c_k);
-                            y_cur.push(c_v);
+                            y_cur.push(_formater_map['v_map'][c.metric](c_v));
                         }
-                        if(!m[c.metric]) m[c.metric] = {'x': [], 'y': []};
-                        m[c.metric]['x'].push(x_cur);
-                        m[c.metric]['y'].push(y_cur);
+                        xaxis['data'] = x_cur;
+                        series.push({
+                            name: _formater_map['t_map'][c.metric],
+                            type: 'line',
+                            data: y_cur
+                        });
                     }
-                    for(var metric in m) {
-                        var o = {
-                            tooltip: {
-                                trigger: 'axis'
-                            },
-                            grid: {
-                                left: '3%',
-                                right: '4%',
-                                bottom: '3%',
-                                containLabel: true
-                            },
-                            toolbox: {
-                                feature: {
-                                    restore: {
-                                        how: true
-                                    },
-                                    saveAsImage: {
-                                        show: true
+                    var o = {
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        toolbox: {},
+                        xAxis: xaxis,
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                inside: true,
+                                textStyle: {
+                                    color: function (value, index) {
+                                        return '#999';
                                     }
                                 }
-                            },
-                            xAxis: {},
-                            yAxis: {
-                                type: 'value',
-                                axisLabel: {
-                                    inside: true,
-                                    textStyle: {
-                                        color: function (value, index) {
-                                            return '#999';
-                                        }
-                                    }
-                                }
-                            },
-                            series: []
-                        };
-                        var metric_data = m[metric];
-                        for (var k = 0; k < metric_data.x.length; k++) {
-                            var c_x = metric_data.x[k];
-                            var c_y = metric_data.y[k];
-                            o['xAxis'] = {
-                                type: 'category',
-                                boundaryGap: false,
-                                data: c_x
-                            };
-                            o['series'].push({
-                                name: metric,
-                                type: 'line',
-                                data: c_y
-                            })
-                        }
-                        $._render(metric, o);
-                    }
+                            }
+                        },
+                        series: series
+                    };
+                    $._render(v, o);
                 },
                 complete: function () {}
             };
             $._ajax(options);
-        })
+        });
     }
     $('#goback_host').linkbutton({
         onClick: function () {
@@ -371,9 +297,9 @@
         onSelect: function (title, index) {
             switch(title){
                 case '云监控':
-                    renderer_chars('1h-ago', '30s-avg-nan', 'cpu.idle', 'mem.memfree', 'df.bytes.free',
-                                   'net.if.in.bytes.persec', 'net.if.out.bytes.persec', 'net.if.out.packets.error',
-                                   'net.if.in.packets.persec', 'net.if.out.packets.persec');
+                    renderer_chars('1h-ago', '30s-avg-nan', 'cpu.used.percentage', 'mem.memused.percentage',
+                                   'df.bytes.used.percentage', 'net.if.in.bytes.persec', 'procs.running',
+                                   'net.if.out.bytes.persec');
                     break;
             }
         }
@@ -381,8 +307,7 @@
     $('a.tool-button').unbind('click').bind('click', function () {
         var start = $(this).attr('_start');
         var downsample = $(this).attr('_downsample');
-        renderer_chars(start, downsample, 'cpu.idle', 'mem.memfree', 'df.bytes.free',
-                       'net.if.in.bytes.persec', 'net.if.out.bytes.persec', 'net.if.out.packets.error',
-                       'net.if.in.packets.persec', 'net.if.out.packets.persec');
+        renderer_chars(start, downsample, 'cpu.used.percentage', 'mem.memused.percentage', 'df.bytes.used.percentage',
+                      'net.if.in.bytes.persec', 'procs.running', 'net.if.out.bytes.persec');
     })
 </script>

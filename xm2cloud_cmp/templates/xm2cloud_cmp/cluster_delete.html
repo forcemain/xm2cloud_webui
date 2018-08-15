@@ -72,7 +72,6 @@
                     url: cluster_delete_url,
                     error_width: 501,
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
                         $._control('#control', {href: cluster_list});
                     },

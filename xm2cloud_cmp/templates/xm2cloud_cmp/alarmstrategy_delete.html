@@ -1,0 +1,130 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认删除 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">{{ object.name }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">{{ object.notes }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">启用 : </div>
+                <div class="lf form-input">{% if object.enabled %}是{% else %}否{% endif %}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">重要等级 : </div>
+                <div class="lf form-input">
+                    {% if object.grade == 1 %}
+                        <span class="font-olive">提示</span>
+                    {% elif object.grade == 2 %}
+                        <span class="font-yellow">次要</span>
+                    {% elif object.grade == 3 %}
+                        <span class="font-orange">重要</span>
+                    {% elif object.grade == 4 %}
+                        <span class="font-red">紧急</span>
+                    {% else %}
+                        <span class="font-grey">未知</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if object.topic %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">关联主题 : </div>
+                    <div class="lf form-input">{{ object.name }}</div>
+                </div>
+            {% endif %}
+            {% if object.crontab %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">周期计划 : </div>
+                    <div class="lf form-input">{{ object.crontab.minute }} {{ object.crontab.hour }} {{ object.crontab.day_of_week }} {{ object.crontab.day_of_month }} {{ object.crontab.month_of_year }}</div>
+                </div>
+            {% endif %}
+            {% if object.interval %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">间隔计划 : </div>
+                    <div class="lf form-input">{{ object.interval.every }} {{ object.interval.period }}</div>
+                </div>
+            {% endif %}
+            {% if object.alarmstrategygroup %}
+                <div class="clear"></div>
+                <div class="form-group">
+                    <div class="lf form-label">策略属组 : </div>
+                    <div class="lf form-input">
+                        <a class="link-underline" target="_blank" href="{% url 'xm2cloud_cmp:alarmstrategy_manage' %}?alarmstrategygroupId={{ object.alarmstrategygroup.pk }}&navName=group">
+                            {{ object.alarmstrategygroup.name }}
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_alarmstrategy" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="delete_alarmstrategy" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,selected_id = "{{ object.sevent_uuid }}"
+        ,alarmstrategy_list = "{% url 'xm2cloud_cmp:alarmstrategies' %}"
+        ,alarmstrategy_delete_api = "{% url 'xm2cloud_cmp:api_alarmstrategy_delete' slug=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html;
+        var _load;
+        $('#delete_alarmstrategy').linkbutton({
+            onClick: function () {
+                var that = this;
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var alarmstrategy_delete_url = alarmstrategy_delete_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: alarmstrategy_delete_url,
+                    error_width: 501,
+                    success: function (data) {
+                        // location.href = data.next;
+                        $._control('#control', {href: alarmstrategy_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    }
+                })
+            }
+        });
+        $('#goback_alarmstrategy').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: alarmstrategy_list});
+            }
+        });
+    })
+</script>

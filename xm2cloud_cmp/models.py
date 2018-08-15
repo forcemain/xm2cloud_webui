@@ -152,8 +152,8 @@ class HostGroup(models.Model):
     create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
     id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
 
-    cluster = models.ForeignKey(Cluster)
     owner = models.ForeignKey(User, null=True, blank=True)
+    cluster = models.ForeignKey(Cluster, null=True, blank=True)
     alertcontactgroup = models.ForeignKey(AlertContactGroup, null=True, blank=True)
 
     def __str__(self):
@@ -407,28 +407,141 @@ class UpdateLog(models.Model):
 
 class DashBoardScreen(models.Model):
     name = models.CharField(max_length=255)
+    notes = models.CharField(max_length=255, default='', blank=True)
     update_time = models.DateTimeField(auto_now_add=True, blank=True)
     create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
     id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
 
     owner = models.ForeignKey(User, null=True, blank=True)
-    parent = models.ForeignKey('self', related_name='children', blank=True, null=True)
+
+    @property
+    def iscompared(self):
+        return self.dashboardscreentarget_set.filter(is_compared=True)
+
+    @property
+    def uncompared(self):
+        return self.dashboardscreentarget_set.filter(is_compared=False)
 
     def __str__(self):
         return self.name
 
 
 class DashBoardScreenTarget(models.Model):
-    target = models.CharField(max_length=255, default='')
+    metrics = models.TextField(default='')
+    is_compared = models.BooleanField(default=False)
+    weight = models.SmallIntegerField(default=0, blank=True)
     name = models.CharField(max_length=255, default='', blank=True)
+    notes = models.CharField(max_length=255, default='', blank=True)
     update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    aggregators = models.CharField(max_length=255, default='', blank=True)
     create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
     id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
     charttype = models.CharField(max_length=32, choices=[('line', 'line'), ('pie', 'pie'), ('area', 'area'),
                                                          ('table', 'table'), ('hotmap', 'hotmap')], default='line')
 
     owner = models.ForeignKey(User, null=True, blank=True)
-    screen = models.ForeignKey(DashBoardScreen, related_name='targets')
+    hosts = models.ManyToManyField(Host, null=True, blank=True)
+    screen = models.ForeignKey(DashBoardScreen, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-weight']
+
+    @property
+    def metric_list(self):
+        return self.metrics.split(',')
+
+    @property
+    def aggregator_list(self):
+        return self.aggregators.split(',')
 
     def __str__(self):
-        return '{0}::{1}'.format(self.name, self.target)
+        return '{0}::{1}::{2}'.format(self.name, self.metrics, self.aggregators)
+
+
+class AlarmStrategyGroup(models.Model):
+    name = models.CharField(max_length=255, default='', blank=True)
+    notes = models.CharField(max_length=255, default='', blank=True)
+    update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
+
+    owner = models.ForeignKey(User, null=True, blank=True)
+
+    def __str__(self):
+        return '{0}:{1}'.format(self.name, self.notes)
+
+
+class MessageTopic(models.Model):
+    name = models.CharField(max_length=255, default='', blank=True)
+    notes = models.CharField(max_length=255, default='', blank=True)
+    update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
+
+    owner = models.ForeignKey(User, null=True, blank=True)
+
+    def __str__(self):
+        return '{0}:{1}'.format(self.name, self.notes)
+
+
+class MessageSubscriber(models.Model):
+    terminal = models.TextField()
+    name = models.CharField(max_length=255, default='', blank=True)
+    notes = models.CharField(max_length=255, default='', blank=True)
+    update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    protocol = models.CharField(max_length=32, choices=[('sms', u'短信'), ('email', u'邮件'),
+                                                        ('http', u'HTTP'), ('https', u'HTTPS')])
+    create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
+
+    owner = models.ForeignKey(User, null=True, blank=True)
+    topic = models.ForeignKey(MessageTopic, null=True, blank=True)
+
+    def __str__(self):
+        return '{0}:{1}'.format(self.protocol, self.name)
+
+
+class AlarmStrategy(PeriodicTask):
+    rules = models.TextField(default='')
+    notes = models.CharField(max_length=255, default='', blank=True)
+    sevent_uuid = models.CharField(max_length=36, unique=True, auto_created=True, default=Random.get_uuid,
+                                   editable=False)
+    grade = models.SmallIntegerField(choices=[(1, u'提示'), (2, u'次要'), (3, u'重要'), (4, u'紧急')], default=3, blank=True)
+
+    owner = models.ForeignKey(User, null=True, blank=True)
+    hosts = models.ManyToManyField(Host, null=True, blank=True)
+    topic = models.ForeignKey(MessageTopic, null=True, blank=True)
+    alarmstrategygroup = models.ForeignKey(AlarmStrategyGroup, null=True, blank=True)
+
+    def __str__(self):
+        return '{0}:{1}'.format(self.name, self.notes)
+
+
+class AlarmHistory(models.Model):
+    error = models.TextField(default='')
+    notes = models.TextField(default='')
+    name = models.CharField(max_length=255, default='', blank=True)
+    update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
+
+    host = models.ForeignKey(Host, null=True, blank=True)
+    owner = models.ForeignKey(User, null=True, blank=True)
+    alarmstrategy = models.ForeignKey(AlarmStrategy, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Acknowledge(models.Model):
+    message = models.TextField()
+    update_time = models.DateTimeField(auto_now_add=True, blank=True)
+    create_time = models.DateTimeField(auto_created=True, default=timezone.now, blank=True)
+    ack_choices = models.SmallIntegerField(choices=[(0, u'单个确认'), (1, u'确认所有')], default=0)
+    id = models.CharField(max_length=36, primary_key=True, auto_created=True, default=Random.get_uuid, editable=False)
+
+    owner = models.ForeignKey(User, null=True, blank=True)
+    alarmhistory = models.ForeignKey(AlarmHistory, null=True, blank=True)
+
+    def __str__(self):
+        return self.message

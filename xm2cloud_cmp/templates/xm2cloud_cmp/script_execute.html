@@ -263,7 +263,6 @@
                         },
                         success: function (data){
                             execute_state.html(state);
-                            console.log(location.href+':'+data);
                             location.href = data.next;
                         },
                         complete: function () {

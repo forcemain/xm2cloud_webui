@@ -1,6 +1,9 @@
 ::-webkit-scrollbar{
     display: none;
 }
+select {
+    border: solid 1px #ccc;
+}
 .lf {
     float: left;
 }

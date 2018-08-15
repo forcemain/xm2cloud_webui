@@ -1,0 +1,212 @@
+{% load static %}
+
+<table id="alarmstrategy_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+<div id="rules_contents" class="easyui-window" closed="true" title="规则内容"></div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/aceeditor/ace.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,control_page = "{% url 'xm2cloud_cmp:alarmstrategies' %}"
+        ,alarmstrategy_list = "{% url 'xm2cloud_cmp:alarmstrategies' %}"
+        ,alarmstrategy_create = "{% url 'xm2cloud_cmp:alarmstrategy_create' %}"
+        ,alarmstrategy_manage = "{% url 'xm2cloud_cmp:alarmstrategy_manage' %}"
+        ,alarmstrategy_list_api = "{% url 'xm2cloud_cmp:api_alarmstrategy_list' %}"
+        ,alarmstrategy_update = "{% url 'xm2cloud_cmp:alarmstrategy_update' slug=0 %}"
+        ,alarmstrategy_delete = "{% url 'xm2cloud_cmp:alarmstrategy_delete' slug=0 %}"
+        ,alarmstrategy_detail = "{% url 'xm2cloud_cmp:alarmstrategy_detail' slug=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['alarmstrategySearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click').bind('click', function () {
+            var that = this
+                ,name = $(that).attr('name');
+
+            var options = {}
+                ,selected = $('#alarmstrategy_datagrid').datagrid('getSelected');
+            switch (name){
+                case 'add':
+                    options.href = alarmstrategy_create;
+                    break;
+                case 'edit':
+                    if(!selected){
+                        options.href = alarmstrategy_list;
+                        break;
+                    }
+                    options.href = alarmstrategy_update.replace('/0/', '/'+selected.sevent_uuid+'/');
+                    break;
+                case 'del':
+                    if(!selected){
+                        options.href = alarmstrategy_list;
+                        break;
+                    }
+                    options.href = alarmstrategy_delete.replace('/0/', '/'+selected.sevent_uuid+'/');
+                    break;
+            }
+            $._control('#control', options);
+        });
+        $._datagrid('#alarmstrategy_datagrid', {
+            url: alarmstrategy_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_alarmstrategy_'+item.id;
+                    var mt_id = '#mt_alarmstrategy_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'rules_content':
+                                var eid = 'editor_'+item.id;
+                                var content = '<pre id="' + eid + '" class="ace_editor" style="min-height:350px">'
+                                            + '<textarea class="ace_text-input">' + item.rules
+                                            + '</textarea></pre>';
+                                $._window('#rules_contents', {
+                                    width: '55%',
+                                    height: 380,
+                                    content: content,
+                                    maximizable: true,
+                                    onResize: function (width, height) {
+                                        $(this).window('center');
+                                        $('#'+eid).css('minHeight', height-30);
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            language: 'json',
+                                            contents: item.rules
+                                        }).resize();
+                                    },
+                                    onOpen: function () {
+                                        $._editor(eid, {
+                                            theme: 'github',
+                                            readonly: true,
+                                            language: 'json',
+                                            contents: item.rules
+                                        })
+                                    }
+                                });
+                                break;
+                            case 'enabled_rules':
+                                alert('启用规则: '+item.id);
+                                break;
+                            case 'disable_rules':
+                                alert('禁用规则: '+item.id);
+                        }
+                    });
+                });
+                $('.alarmstrategy-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field:'name',width:'44%',title:'名称',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = alarmstrategy_detail.replace('/0/', '/' + row.sevent_uuid + '/');
+                        return '<a _t="'+_t+'" title="'+row.notes+'" class="easyui-tooltip alarmstrategy-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'policy',width:'11%',title:'策略',
+                    formatter: function(value, row, index){
+                        var policy = 'N/A';
+                        if(row.interval_id){
+                            policy = '每 '+row.interval_every;
+                            switch (row.interval_period){
+                                case 'days':
+                                    policy += ' 天';
+                                    break;
+                                case 'hours':
+                                    policy += ' 小时';
+                                    break;
+                                case 'minutes':
+                                    policy += ' 分钟';
+                                    break;
+                                case 'seconds':
+                                    policy += ' 秒';
+                                    break;
+                                case 'microseconds':
+                                    policy += ' 毫秒';
+                                    break;
+                            }
+                        }
+                        if(row.crontab_id){
+                            policy = (row.crontab_minute?row.crontab_minute:'')
+                                   + (row.crontab_hour?(' '+row.crontab_hour):'')
+                                   + (row.crontab_day_of_week?(' '+row.crontab_day_of_week):'')
+                                   + (row.crontab_day_of_month?(' '+row.crontab_day_of_month):'')
+                                   + (row.crontab_month_of_year?(' '+row.crontab_month_of_year):'');
+                        }
+
+                        return policy;
+                    }
+                },
+                {
+                    field:'grade',width:'3%',title:'等级',sortable:true,
+                    formatter: function(value, row, index){
+                        switch (value){
+                            case 1:
+                                return '<span class="font-olive">提示</span>';
+                            case 2:
+                                return '<span class="font-yellow">次要</span>';
+                            case 3:
+                                return '<span class="font-orange">重要</span>';
+                            case 4:
+                                return '<span class="font-red">紧急</span>';
+                            default:
+                                return '<span class="font-grey">未知</span>';
+                        }
+                    }
+                },
+                {
+                    field:'last_run_at',width:'11%',title:'最近执行',
+                    formatter: function(value, row, index){
+                        return value && value || 'N/A';
+                    }
+                },
+                {
+                    field:'hosts',width:'4%',title:'主机',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = host_manage+'?alarmstrategyId='+row.id+"&navName=host";
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'enabled',width:'2%',title:'启用',
+                    formatter: function(value, row, index){
+                        if(!value){
+                            return '<a href="#" class="font-red">否</a>';
+                        }else{
+                            return '<a href="#" class="font-green">是</a>';
+                        }
+                    }
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_alarmstrategy_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_alarmstrategy_'+row.id+'" style="display: none;">'
+                                  + '<div _t="rules_content" class="menu-more">查看规则</div>'
+                                  + '<div _t="enabled_rules" class="menu-more">启用规则</div>'
+                                  + '<div _t="disable_rules" class="menu-more">禁用规则</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

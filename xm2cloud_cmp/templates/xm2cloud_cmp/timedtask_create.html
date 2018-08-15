@@ -126,6 +126,7 @@
         ,timedtask_list = "{% url 'xm2cloud_cmp:timedtasks' %}"
         ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
         ,crontab_create = "{% url 'xm2cloud_cmp:crontab_create' %}"
+        ,control_page = "{% url 'xm2cloud_cmp:timedtask_create' %}"
         ,script_list_api = "{% url 'xm2cloud_cmp:api_script_list' %}"
         ,interval_create = "{% url 'xm2cloud_cmp:interval_create' %}"
         ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
@@ -356,7 +357,6 @@
                     error_width: 501,
 
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
                         $._control('#control', {href: timedtask_list});
                     },

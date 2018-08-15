@@ -64,6 +64,8 @@ INSTALLED_APPS = [
 ]
 INSTALLED_APPS += [
     'djcelery',
+    'rest_framework',
+    'rest_framework_swagger',
 ]
 
 MIDDLEWARE = [
@@ -145,6 +147,8 @@ TIME_ZONE = 'Asia/Shanghai'
 STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'upload_files')
 
@@ -279,3 +283,14 @@ MONITORING_TASK_KEY_PREFIX = 'xm2cloud_agent::monitoring::key'
 MONITORING_TASK_VAL_PREFIX = 'xm2cloud_agent::monitoring::val'
 AGENT_HEARTBEAT_TASK_KEY_PREFIX = 'xm2cloud_agent::heartbeat::key'
 ENGINE_HEARTBEAT_TASK_KEY_PREFIX = 'xm2cloud_engine::heartbeat::key'
+
+
+# Restframework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    # 'DEFAULT_AUTHENTICATIIN_CLASSES': [
+    #     'xm2cloud_cmp.rest_api.v1.views.CsrfExemptSessionAuthentication'
+    # ]
+}

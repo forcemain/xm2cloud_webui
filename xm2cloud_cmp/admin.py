@@ -40,11 +40,19 @@ class ContinentAdmin(admin.ModelAdmin):
 
 
 class ScriptLogAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ['script_name']
+
+
+class UpdateLogAdmin(admin.ModelAdmin):
+    search_fields = ['sevent_uuid']
 
 
 class TimedTaskAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
+
+
+class AcknowledgeAdmin(admin.ModelAdmin):
+    search_fields = ['message']
 
 
 class TaskWorkFlowAdmin(admin.ModelAdmin):
@@ -52,6 +60,18 @@ class TaskWorkFlowAdmin(admin.ModelAdmin):
 
 
 class WorkFlowTaskAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class MessageTopicAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class AlarmHistoryAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class AlarmStrategyAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
 
@@ -91,9 +111,16 @@ class AlertContactGroupAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
 
-class DashBoardScreenTargetAdmin(admin.ModelAdmin):
+class MessageSubscriberAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes']
 
+
+class AlarmStrategyGroupAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
+
+
+class DashBoardScreenTargetAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'notes']
 
 admin.site.register(models.Host, HostAdmin)
 admin.site.register(models.Script, ScriptAdmin)
@@ -101,19 +128,26 @@ admin.site.register(models.IpLine, IpLineAdmin)
 admin.site.register(models.Region, RegionAdmin)
 admin.site.register(models.Cluster, ClusterAdmin)
 admin.site.register(models.OemInfo, OemInfoAdmin)
+admin.site.register(models.UpdateLog, UpdateLogAdmin)
 admin.site.register(models.ScriptLog, ScriptLogAdmin)
 admin.site.register(models.HostGroup, HostGroupAdmin)
 admin.site.register(models.Continent, ContinentAdmin)
 admin.site.register(models.TimedTask, TimedTaskAdmin)
+admin.site.register(models.Acknowledge, AcknowledgeAdmin)
 admin.site.register(models.ScriptGroup, ScriptGroupAdmin)
 admin.site.register(models.AlertContact, AlertContactAdmin)
 admin.site.register(models.Manufacturer, ManufacturerAdmin)
 admin.site.register(models.TaskWorkFlow, TaskWorkFlowAdmin)
 admin.site.register(models.WorkFlowTask, WorkFlowTaskAdmin)
+admin.site.register(models.MessageTopic, MessageTopicAdmin)
+admin.site.register(models.AlarmHistory, AlarmHistoryAdmin)
+admin.site.register(models.AlarmStrategy, AlarmStrategyAdmin)
 admin.site.register(models.IpLinePackage, IpLinePackageAdmin)
 admin.site.register(models.ClusterContext, ClusterContextAdmin)
 admin.site.register(models.OperatingSystem, OperatingSystemAdmin)
 admin.site.register(models.DashBoardScreen, DashBoardScreenAdmin)
 admin.site.register(models.HostGroupContext, HostGroupContextAdmin)
 admin.site.register(models.AlertContactGroup, AlertContactGroupAdmin)
+admin.site.register(models.MessageSubscriber, MessageSubscriberAdmin)
+admin.site.register(models.AlarmStrategyGroup, AlarmStrategyGroupAdmin)
 admin.site.register(models.DashBoardScreenTarget, DashBoardScreenTargetAdmin)

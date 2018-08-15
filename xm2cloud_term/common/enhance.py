@@ -157,3 +157,4 @@ class Random(object):
     def get_uuid():
         return uuid.uuid4().__str__()
 
+get_uuid = Random.get_uuid

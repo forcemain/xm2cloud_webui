@@ -7,15 +7,17 @@ import time
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.template import Template, Context
 
 
 from .common.enhance import ExtDict
+from .common.trigger.engine import TriggerEngine
 from .common.rabbitmq import RabbitMQChannelSender
 from .common.models.event.pub_event import PubEvent
 from .common.models.event.event_type import EventType
 from .common.models.userdata.user_data import UserData
 from .common.models.event.user_script import UserScript
-from .models import Cluster, HostGroup, Host, Script, ScriptLog, TimedTask, UpdateLog
+from .models import Cluster, HostGroup, Host, Script, ScriptLog, TimedTask, UpdateLog, AlarmStrategy, AlarmHistory
 
 
 class ExecuteScriptMixin(object):
@@ -289,3 +291,46 @@ class UpdateUserDataMixin(object):
         target_events, target_hosts = self.get_execute_target(sevent_uuid, owner, cluster, hostgroup, host)
 
         return target_events, target_hosts
+
+
+class AnalyseTriggerMixin(object):
+    _data_source = None
+    result_model = AlarmHistory
+    engine_class = TriggerEngine
+    sender_class = RabbitMQChannelSender
+
+    @property
+    def data_source(self):
+        return self._data_source
+
+    @data_source.setter
+    def data_source(self, data):
+        self._data_source = data
+
+    def get_sender(self):
+        return self.sender_class()
+
+    def get_engine(self):
+        return self.engine_class()
+
+    def get_owner(self):
+        ownerid = self.data_source.get('owner', 0)
+
+        return User.objects.filter(pk=ownerid).first()
+
+    def get_alarmstrategy(self):
+        alarmstrategyid = self.data_source.get('alarmstrategy', '')
+
+        return AlarmStrategy.objects.filter(sevent_uuid=alarmstrategyid).first()
+
+    def render_data(self, tpl, ctx):
+        t = Template(tpl)
+        c = Context(ctx)
+
+        return t.render(c)
+
+    def render_rules(self, rules, host):
+        ctx = {'object': host}
+        rules = self.render_data(rules, ctx)
+
+        return rules

@@ -194,29 +194,35 @@
     $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
 
     $(function () {
-        var _html;
-        var _load;
+        var _html
+            ,_load
+            ,oem_left_select = $('#oem_left_select')
+            ,oem_right_select = $('#oem_right_select')
+            ,ipline_left_select = $('#ipline_left_select')
+            ,ipline_right_select = $('#ipline_right_select')
+            ,hostgroup_left_select = $('#hostgroup_left_select')
+            ,hostgroup_right_select = $('#hostgroup_right_select');
         $('#oem_l2r').linkbutton({
             onClick: function () {
-                $('#oem_left_select>option').each(function () {
+                oem_left_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#oem_right_select'));
+                        $(this).remove().appendTo(oem_right_select);
                     }
                 })
             }
         });
         $('#oem_r2l').linkbutton({
             onClick: function () {
-                $('#oem_right_select>option').each(function () {
+                oem_right_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#oem_left_select'));
+                        $(this).remove().appendTo(oem_left_select);
                     }
                 })
             }
         });
         $('#oem_left_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#oem_left_select>option').each(function () {
+                oem_left_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -227,7 +233,7 @@
         });
         $('#oem_right_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#oem_right_select>option').each(function () {
+                oem_right_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -238,25 +244,25 @@
         });
         $('#ipline_l2r').linkbutton({
             onClick: function () {
-                $('#ipline_left_select>option').each(function () {
+                ipline_left_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#ipline_right_select'));
+                        $(this).remove().appendTo(ipline_right_select);
                     }
                 })
             }
         });
         $('#ipline_r2l').linkbutton({
             onClick: function () {
-                $('#ipline_right_select>option').each(function () {
+                ipline_right_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#ipline_left_select'));
+                        $(this).remove().appendTo(ipline_left_select);
                     }
                 })
             }
         });
         $('#ipline_left_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#ipline_left_select>option').each(function () {
+                ipline_left_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -267,7 +273,7 @@
         });
         $('#ipline_right_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#ipline_right_select>option').each(function () {
+                ipline_right_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -278,25 +284,25 @@
         });
         $('#hostgroup_l2r').linkbutton({
             onClick: function () {
-                $('#hostgroup_left_select>option').each(function () {
+                hostgroup_left_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#hostgroup_right_select'));
+                        $(this).remove().appendTo(hostgroup_right_select);
                     }
                 })
             }
         });
         $('#hostgroup_r2l').linkbutton({
             onClick: function () {
-                $('#hostgroup_right_select>option').each(function () {
+                hostgroup_right_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#hostgroup_left_select'));
+                        $(this).remove().appendTo(hostgroup_left_select);
                     }
                 })
             }
         });
         $('#hostgroup_left_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#hostgroup_left_select>option').each(function () {
+                hostgroup_left_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -307,7 +313,7 @@
         });
         $('#hostgroup_right_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#hostgroup_right_select>option').each(function () {
+                hostgroup_right_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -327,9 +333,9 @@
                     ,vmcpu = $('#vmcpu').textbox('getValue')
                     ,vmmem = $('#vmmem').textbox('getValue')
                     ,bill_method = $('#bill_method').combobox('getValue')
-                    ,oems = $('#oem_right_select').find('option').map(function(){return $(this).val()}).get()
-                    ,ipline_set = $('#ipline_right_select').find('option').map(function(){return $(this).val()}).get()
-                    ,hostgroups = $('#hostgroup_right_select').find('option').map(function(){return $(this).val()}).get();
+                    ,oems = $('#oem_right_select').find('option:visible').map(function(){return $(this).val()}).get()
+                    ,ipline_set = $('#ipline_right_select').find('option:visible').map(function(){return $(this).val()}).get()
+                    ,hostgroups = $('#hostgroup_right_select').find('option:visible').map(function(){return $(this).val()}).get();
 
                 if (!_html) _html = $(that).find('span:last').html();
                 _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
@@ -341,7 +347,6 @@
                     traditional: true,
                     error_width: 501,
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
                         $._control('#control', {href: host_list});
                     },

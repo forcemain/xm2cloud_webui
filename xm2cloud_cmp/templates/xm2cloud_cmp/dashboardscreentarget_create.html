@@ -1,0 +1,449 @@
+{% load static %}
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认新增 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>图表配置</legend>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">
+                    <input id="name" name="name" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes" name="notes" class="easyui-textbox" value="" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">指标 : </div>
+                <div class="lf form-input">
+                    <input id="metric_select" name="metric_select" class="easyui-textbox" value="" data-options="width:'380',height:'32'"
+                           prompt="自动提示">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">聚合 : </div>
+                <div class="lf form-input">
+                    <select id="aggregator_select" name="aggregator_select" class="easyui-combobox" value="" prompt="--可选择--"
+                            multiple="true" data-options="width:'380',height:'32'">
+                        <option value="avg">平均值</option>
+                        <option value="max">最大值</option>
+                        <option value="min">最小值</option>
+                        <option value="sum">总和值</option>
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">集群 : </div>
+                <div class="lf form-input">
+                    <select id="cluster_select" name="cluster_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" required="true" missingMessage="" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">群组 : </div>
+                <div class="lf form-input">
+                    <select id="hostgroup_select" name="hostgroup_select" class="easyui-combobox" value="" prompt="--请选择--"
+                            disabled="true" data-options="width:'380',height:'32'">
+                    </select>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">预览 : </div>
+                <div class="lf form-input">
+                    <div class="chart-preview">
+                        <div class="charts-data">
+                            <div id="chart_preview" class="chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">主机 : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="left_search" name="left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="left_select" class="left-select" multiple="multiple">
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="right_search" name="right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="right_select" class="right-select" multiple="multiple"></select>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_dashboardscreendetail" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="create_dashboardscreentarget" href="#" class="easyui-linkbutton button-white no-border-radius">发布</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/enhance.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/datetime.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/echarts.common.min.js' %}"></script>
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_list_api = "{% url 'xm2cloud_cmp:api_host_list' %}"
+        ,cluster_list_api = "{% url 'xm2cloud_cmp:api_cluster_list' %}"
+        ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
+        ,dashboardscreen_detail = "{% url 'xm2cloud_cmp:dashboardscreen_detail' id=0 %}"
+        ,monitor_metrics_query_api = "{% url 'xm2cloud_cmp:api_monitor_metrics_query' %}"
+        ,monitor_metrics_suggest_api = "{% url 'xm2cloud_cmp:api_monitor_metrics_suggest' %}"
+        ,dashboardscreentarget_create_api = "{% url 'xm2cloud_cmp:api_dashboardscreentarget_create' %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html
+            ,_load
+            ,chart
+            ,left_select = $('#left_select')
+            ,left_search = $('#left_search')
+            ,right_search = $('#right_search')
+            ,right_select = $('#right_select')
+            ,screen_select = $('#screen_select')
+            ,metric_select = $('#metric_select')
+            ,cluster_select = $('#cluster_select')
+            ,hostgroup_select = $('#hostgroup_select')
+            ,aggregator_select = $('#aggregator_select');
+
+        function renderer_chars() {
+            var start = arguments[0]
+                ,downsample = arguments[1]
+                ,_formater_map = {'t_map': {}}
+                ,metrics = metric_select.combobox('getValues').clean('')
+                ,aggregators = aggregator_select.combobox('getValues').clean('');
+            if(!metrics) return;
+            if(chart) chart.clear();
+            var _hosts_map = []
+                ,_metric_map = {}
+                ,_aggregators = []
+                ,data = {queries: [], start: start, msResolution: true};
+            if(aggregators.length>0){
+                var targets = [];
+                right_select.find('option').each(function () {
+                    var k = $(this).val();
+                    var v = $(this).text();
+                    targets.push(k);
+                    _hosts_map[k] = v;
+                });
+                for(var i=0; i<aggregators.length; i++){
+                    var c=aggregators[i];
+                    for(var j=0; j<metrics.length; j++){
+                        var m = metrics[j];
+                        _aggregators.push(c);
+                        data['queries'].push({
+                            aggregator: c,
+                            metric: m,
+                            downsample: downsample,
+                            filters: [
+                                {
+                                    type: 'literal_or',
+                                    tagk: 'uuid',
+                                    filter: targets.join('|'),
+                                    groupBy: false
+                                }
+                            ]
+                        })
+                    }
+                }
+            }else{
+                right_select.find('option').each(function () {
+                    var target = $(this).val();
+                    for(var i=0; i<metrics.length; i++) {
+                        var m = metrics[i];
+                        var _metric_tag
+                            ,_metrictags = {};
+                        var k = $(this).val();
+                        var v = $(this).text();
+                        _hosts_map[k] = v;
+                        if(m.startswith('net.if.')){
+                            _metric_tag = 'iface';
+                            _metrictags['iface'] = '*';
+                        }
+                        if(m.startswith('df.bytes.')){
+                            _metric_tag = 'mount';
+                            _metrictags['mount'] = '*';
+                        }
+                        _metrictags['uuid'] = target;
+                        _metric_map[m] = _metric_tag;
+                        data['queries'].push({
+                            aggregator: 'avg',
+                            metric: m,
+                            tags: _metrictags,
+                            downsample: downsample
+                        })
+                    }
+                });
+            }
+            var options = {
+                data: JSON.stringify(data),
+                error_width: 501,
+                url: monitor_metrics_query_api,
+                success: function (data) {
+                    var series = []
+                        ,xaxis = {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: []
+                    };
+                    for(var i = 0; i<data.length; i++){
+                        var c = data[i];
+                        if(c.error) continue;
+                        _formater_map['t_map'][c.metric] = (_aggregators[i]?_aggregators[i]:_hosts_map[c.tags.uuid])+' '+c.metric+' '+(_metric_map[c.metric]?c.tags[_metric_map[c.metric]].cut(20):'');
+                        var x_cur = [];
+                        var y_cur = [];
+                        var skeys = [];
+                        $.each(c.dps, function (k, v) {
+                            skeys.push(k);
+                        });
+                        skeys = skeys.sort(function (p, n) {
+                            return parseInt(p)-parseInt(n);
+                        });
+                        for(var j = 0; j<skeys.length; j++){
+                            var c_v = c.dps[skeys[j]];
+                            var c_k = DateUtil.dateToStr('MM-dd HH:mm:ss', new Date(parseInt(skeys[j])));
+                            x_cur.push(c_k);
+                            y_cur.push(c_v);
+                        }
+                        xaxis['data'] = x_cur;
+                        series.push({
+                            name: _formater_map['t_map'][c.metric],
+                            type: 'line',
+                            data: y_cur
+                        });
+                    }
+                    var o = {
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        toolbox: {
+                            feature: {
+                                restore: {
+                                    how: true
+                                },
+                                saveAsImage: {
+                                    show: true
+                                }
+                            }
+                        },
+                        xAxis: xaxis,
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                inside: true,
+                                textStyle: {
+                                    color: function (value, index) {
+                                        return '#999';
+                                    }
+                                }
+                            }
+                        },
+                        series: series
+                    };
+                    chart = $._render('chart_preview', o);
+                },
+                complete: function () {}
+            };
+            $._ajax(options);
+        }
+        $('#l2r').linkbutton({
+            onClick: function () {
+                left_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(right_select);
+                    }
+                });
+                var metric_value = metric_select.combobox('getValue');
+                if(!metric_value) return;
+                renderer_chars('3h-ago', '1m-avg-nan', metric_value);
+            }
+        });
+        $('#r2l').linkbutton({
+            onClick: function () {
+                right_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(left_select);
+                    }
+                });
+                var metric_value = metric_select.combobox('getValue');
+                if(!metric_value) return;
+                renderer_chars('3h-ago', '1m-avg-nan', metric_value);
+            }
+        });
+        left_search.textbox({
+            onChange: function (newValue, oldValue) {
+                left_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        right_search.textbox({
+            onChange: function (newValue, oldValue) {
+                right_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $._combobox('#metric_select', {
+            method: 'GET',
+            mode: 'remote',
+            multiple: true,
+            selectOnNavigation: false,
+            formatter: function (row) {
+                return row.name;
+            },
+            url: monitor_metrics_suggest_api,
+            filter: function (q, row) {
+                return row['name'].indexOf(q) >= 0;
+            },
+            queryParams: {'max': 10, 'type': 'metrics'}
+        });
+        $._ajax({
+            type: 'GET',
+            url: cluster_list_api,
+            traditional: true,
+            error_width: 501,
+            beforeSend: function (XHR) {
+            },
+            success: function (data) {
+                $._combobox('#cluster_select', {
+                    disabled: false,
+                    onSelect: function (record) {
+                        hostgroup_select.combobox('clear');
+                        $._ajax({
+                            type: 'GET',
+                            url: hostgroup_list_api+'?clusterId='+record.id,
+                            traditional: true,
+                            error_width: 501,
+                            beforeSend: function (XHR) {
+                            },
+                            success: function (data) {
+                                $._combobox('#hostgroup_select', {
+                                    disabled: false,
+                                    onSelect: function (record) {
+                                        $._ajax({
+                                            type: 'GET',
+                                            url: host_list_api + '?hostgroupId=' + record.id,
+                                            traditional: true,
+                                            error_width: 501,
+                                            beforeSend: function (XHR) {
+                                            },
+                                            success: function (data){
+                                                left_select.empty();
+                                                for(var i=0; i<data.rows.length; i++){
+                                                    var c=data.rows[i];
+                                                    var l=left_select.find('option[value="'+c.id+'"]');
+                                                    var r=right_select.find('option[value="'+c.id+'"]');
+                                                    if(l.length || r.length) continue;
+                                                    left_select.append('<option value="'+c.id+'">'+c.name+'</option>');
+                                                }
+                                            },
+                                            complete: function () {
+                                            }
+                                        })
+                                    },
+                                    onLoadSuccess: function (){
+                                    }
+                                });
+                                hostgroup_select.combobox('loadData', data.rows);
+                            },
+                            complete: function () {
+                            }
+                        })
+                    },
+                    onLoadSuccess: function () {
+                    }
+                });
+                cluster_select.combobox('loadData', data.rows);
+            },
+            complete: function () {
+            }
+        });
+        $('#create_dashboardscreentarget').linkbutton({
+            onClick: function () {
+                var that = this
+                    ,name = $('#name').textbox('getValue')
+                    ,notes = $('#notes').textbox('getValue')
+                    ,screen = screen_select.combobox('getValue')
+                    ,metrics = metric_select.combobox('getValues').clean('')
+                    ,aggregators = aggregator_select.combobox('getValues').clean('')
+                    ,hosts = right_select.find('option:visible').map(function(){return $(this).val()}).get();
+                var is_compared = Boolean(aggregators.length);
+
+                if(!screen) return;
+                var dashboardscreen_detail_href = dashboardscreen_detail.replace('/0/', '/'+screen+'/');
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                $._ajax({
+                    url: dashboardscreentarget_create_api,
+                    traditional: true,
+                    error_width: 501,
+                    success: function (data) {
+                        // location.href = data.next;
+                        $._control('#control', {href: dashboardscreen_detail_href});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {
+                        name: name, notes: notes,
+                        metrics: metrics.join(','), aggregators: aggregators.join(','),
+                        is_compared: is_compared, screen: screen, hosts: hosts
+                    }
+                })
+            }
+        });
+        $('#goback_dashboardscreendetail').linkbutton({
+            onClick: function () {
+                var screen = screen_select.combobox('getValue');
+                if(!screen) return;
+                var dashboardscreen_detail_href = dashboardscreen_detail.replace('/0/', '/'+screen+'/');
+                $._control('#control', {href: dashboardscreen_detail_href});
+            }
+        });
+    })
+</script>

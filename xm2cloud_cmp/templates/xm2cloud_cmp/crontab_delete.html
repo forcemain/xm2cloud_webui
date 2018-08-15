@@ -62,9 +62,8 @@
                     traditional: true,
                     error_width: 501,
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
-                        $._control('#control', {href: pre_page});
+                        $._control('#control', {href: control_page});
                     },
                     complete: function () {
                         $(that).find('span:last').html(_html);
@@ -74,7 +73,7 @@
         });
         $('#goback_timedtask').linkbutton({
             onClick: function () {
-                $._control('#control', {href: pre_page});
+                $._control('#control', {href: control_page});
             }
         });
     })

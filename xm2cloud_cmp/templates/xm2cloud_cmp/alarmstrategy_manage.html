@@ -1,0 +1,97 @@
+{% extends 'xm2cloud_cmp/_base.html' %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <style type="text/css">
+        #rules_editor {
+            min-width: 828px;
+            min-height: 550px;
+        }
+    </style>
+{% endblock %}
+
+{% block container %}
+    <div id="head" region="north" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_head.html' %}
+    </div>
+    <div id="body" region="center" title="" split="false" border="false">
+        <div class="easyui-layout body-container" fit="true">
+            <div class="nav-menu" region="west" title="" split="false" border="false" width="200">
+                <div class="menu-title">告警策略</div>
+                <div class="menu-body">
+                    <a class="menu-item active" name="group" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">策略分组</div>
+                    </a>
+                    <a class="menu-item" name="rule" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">告警策略</div>
+                    </a>
+                    <a class="menu-item" name="history" href="#">
+                        <div class="nav-icon"></div>
+                        <div class="nav-title">告警历史</div>
+                    </a>
+                </div>
+            </div>
+            <div region="center" title="" split="false" border="false">
+                <div class="easyui-layout body-container" fit="true">
+                    <div class="nav-tool" region="north" title="<a class='link-underline'>策略分组</a>" split="false"
+                         border="false" collapsible="false">
+                        <div class="nav-tool-container">
+                            <div class="lf left-tools">
+                                <a name="add" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-plus"> 添加</i></a>
+                                <a name="edit" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-pencil"> 修改</i></a>
+                                <a name="del" href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-minus"> 删除</i></a>
+                            </div>
+                            <div class="rt right-tools">
+                                <input id="global_search" name="global_search" class="easyui-textbox" prompt="搜一下, 又不会怀孕～">
+                                <a href="#" class="tool-button easyui-linkbutton button-white normal-button"><i class="fa fa-search"> 搜一下</i></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-page" region="center" title="" split="false" border="false" id="control"
+                         href="{% url 'xm2cloud_cmp:alarmstrategygroups' %}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="foot" region="south" title="" split="false" border="false">
+        {% include 'xm2cloud_cmp/_foot.html' %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'xm2cloud_cmp/js/purl.js' %}"></script>
+    <script type="text/javascript">
+        var alarmstrategy_list = "{% url 'xm2cloud_cmp:alarmstrategies'%}"
+            ,alarmhistory_list = "{% url 'xm2cloud_cmp:alarmhistories' %}"
+            ,alarmstrategygroup_list = "{% url 'xm2cloud_cmp:alarmstrategygroups'%}";
+
+        $(function () {
+            $('a.menu-item').unbind('click').bind('click', function () {
+                var nav_title = $(this).find('.nav-title').text();
+                $('.nav-tool').panel('setTitle', "<a class='link-underline'>"+nav_title+"</a>");
+                $(this).addClass('active').siblings('a').removeClass('active');
+                var options = {}
+                    ,name = $(this).attr('name');
+                switch (name){
+                    case 'group':
+                        options.href = alarmstrategygroup_list;
+                        break;
+                    case 'rule':
+                        options.href = alarmstrategy_list;
+                        break;
+                    case 'history':
+                        options.href = alarmhistory_list;
+                        break;
+                }
+                $._control('#control', options);
+            });
+            var navname = $.url(location.href).param('navName');
+            $('a.menu-item[name="' + (navname || 'host') + '"]').click();
+        });
+    </script>
+{% endblock %}

@@ -20,11 +20,13 @@ from django.views.generic import TemplateView, DetailView, View
 
 
 from .tasks import ExecutorTimedTask
+from .common.models.userdata.user_data import UserData
 from .base import JSONListView, JSONCreateView, JSONDeleteView, JSONUpdateView
 from .signal import model_task, host_post_save, hostgroup_post_save, cluster_post_save
 from .models import (Cluster, Host, IpLine, IpLinePackage, Continent, HostGroup, AlertContactGroup, DashBoardScreen,
                      Manufacturer, Region, OemInfo, OperatingSystem, Script, ScriptGroup, ScriptLog, TimedTask,
-                     TaskWorkFlow, WorkFlowTask)
+                     TaskWorkFlow, WorkFlowTask, DashBoardScreenTarget, AlarmStrategyGroup, AlarmStrategy, AlarmHistory,
+                     MessageTopic)
 
 
 class QuerySetProxy(list):
@@ -77,8 +79,44 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(DashboardView, self).get_context_data(**kwargs)
         context.update({
-            'render_url': reverse_lazy('xm2cloud_cmp:api_graphite_metric_render'),
-            'finder_url': reverse_lazy('xm2cloud_cmp:api_graphite_metric_finder'),
+        })
+
+        return context
+
+
+class AgentInstallView(LoginRequiredMixin, DetailView):
+    model = Host
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/agent_install.html'
+
+    def get_user_data(self):
+        user_data = UserData(
+            host_id=self.object.pk,
+            rabbitmq_ssl=settings.CHANNEL_RABBITMQ_SSL,
+            rabbitmq_host=settings.CHANNEL_RABBITMQ_HOST,
+            rabbitmq_port=settings.CHANNEL_RABBITMQ_PORT,
+            rabbitmq_vhost=settings.CHANNEL_RABBITMQ_VHOST,
+            rabbitmq_up_queue=settings.CHANNEL_RABBITMQ_UP_QUEUE,
+            rabbitmq_auth_user=settings.CHANNEL_RABBITMQ_AUTH_USER,
+            rabbitmq_auth_pass=settings.CHANNEL_RABBITMQ_AUTH_PASS,
+            rabbitmq_down_queue=settings.CHANNEL_RABBITMQ_DOWN_QUEUE,
+            rabbitmq_up_exchange=settings.CHANNEL_RABBITMQ_UP_EXCHANGE,
+            rabbitmq_down_exchange=settings.CHANNEL_RABBITMQ_DOWN_EXCHANGE,
+            rabbitmq_up_routing_key=settings.CHANNEL_RABBITMQ_UP_ROUTING_KEY,
+            rabbitmq_down_routing_key=settings.CHANNEL_RABBITMQ_DOWN_ROUTING_KEY,
+            rabbitmq_up_exchange_type=settings.CHANNEL_RABBITMQ_UP_EXCHANGE_TYPE,
+            hostgroup_id=list(self.object.hostgroups.values_list('pk', flat=True)),
+            rabbitmq_down_exchange_type=settings.CHANNEL_RABBITMQ_DOWN_EXCHANGE_TYPE,
+            cluster_id=list(self.object.hostgroups.values_list('cluster__pk', flat=True))
+        )
+
+        return user_data
+
+    def get_context_data(self, **kwargs):
+        user_data = self.get_user_data()
+        context = super(AgentInstallView, self).get_context_data(**kwargs)
+        context.update({
+            'userdata': user_data.to_json()
         })
 
         return context
@@ -180,7 +218,11 @@ class ClusterApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['clusterId', 'clusterSearch']
         )
-        queryset, order_by_field = super(ClusterApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(ClusterApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if clusterid is not None:
             queryset = queryset.filter(pk=clusterid)
@@ -231,7 +273,9 @@ class ClusterApiCreateView(LoginRequiredMixin, JSONCreateView):
 
     def form_valid(self, form):
         self.object = form.save()
-        self.object.hostgroup_set = self.get_hostgroup_set()
+        self.object.owner = self.request.user
+        hostgroup_set = self.get_hostgroup_set()
+        self.object.hostgroup_set.add(*hostgroup_set.all())
         self.object.save()
 
         data = {'next': self.get_success_url()}
@@ -252,7 +296,9 @@ class ClusterApiUpdateView(LoginRequiredMixin, JSONUpdateView):
     def form_valid(self, form):
         self.object = form.save()
         self.object.owner = self.request.user
-        self.object.hostgroup_set = self.get_hostgroup_set()
+        self.object.hostgroup_set.update(cluster=None)
+        hostgroup_set = self.get_hostgroup_set()
+        self.object.hostgroup_set.add(*hostgroup_set.all())
         self.object.save()
 
         data = {'next': self.get_success_url()}
@@ -367,7 +413,11 @@ class HostgroupApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['clusterId', 'hostgroupId', 'hostId', 'hostgroupSearch']
         )
-        queryset, order_by_field = super(HostgroupApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(HostgroupApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if hostgroupid is not None:
             queryset = queryset.filter(pk=hostgroupid)
@@ -473,6 +523,7 @@ class HostgroupApiUpdateView(LoginRequiredMixin, JSONUpdateView):
 class HostgroupApiDeleteView(LoginRequiredMixin, JSONDeleteView):
     model = HostGroup
     pk_url_kwarg = 'id'
+
 
 class HostListView(LoginRequiredMixin, TemplateView):
     template_name = 'xm2cloud_cmp/hosts.html'
@@ -588,7 +639,11 @@ class HostApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['hostId', 'iplineId', 'regionId', 'hostgroupId', 'continentId', 'manufacturerId', 'hostSearch']
         )
-        queryset, order_by_field = super(HostApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(HostApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if hostid is not None:
             queryset = queryset.filter(pk=hostid)
@@ -607,8 +662,7 @@ class HostApiListView(LoginRequiredMixin, JSONListView):
             queryset = queryset.filter(area__continent__pk=continentid)
 
         if hostgroupid is not None:
-            hostgroups = HostGroup.objects.filter(pk=hostgroupid)
-            queryset = queryset.filter(hostgroups__in=hostgroups).distinct()
+            queryset = queryset.filter(hostgroups__pk=hostgroupid).distinct()
 
         if hostsearch is not None:
             condition_or_list = Q()
@@ -758,16 +812,25 @@ class MonitorMetricsApiQueryView(MonitorMetricsApiBaseView):
 
 
 class MonitorMetricsApiSuggestView(MonitorMetricsApiBaseView):
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
+        results = []
+        q = request.GET.get('q', '')
+        fields = {
+            'q': q.split(',')[-1],
+            'max': request.GET.get('max', 15),
+            'type': request.GET.get('type', 'metrics')
+        }
+
         dataurl = self.get_dataurl('suggest')
         headers = self.get_headers()
+
         try:
-            r = settings.HTTP_POOL.request('POST', dataurl, body=request.body, headers=headers)
+            r = settings.HTTP_POOL.request('GET', dataurl, fields=fields, headers=headers)
             data = json.loads(r.data)
         except ReadTimeoutError:
             data = []
-
-        return JsonResponse(data, safe=False)
+        map(lambda obj: results.append({'id': obj, 'name': obj}), data)
+        return JsonResponse(results, safe=False)
 
 
 class IpLineListView(LoginRequiredMixin, TemplateView):
@@ -859,7 +922,11 @@ class IpLineApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['iplineId', 'hostId', 'iplinepackageId', 'iplineSearch']
         )
-        queryset, order_by_field = super(IpLineApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(IpLineApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if iplineid is not None:
             queryset = queryset.filter(pk=iplineid)
@@ -1029,7 +1096,11 @@ class IpLinePackageApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['iplinePackageId', 'iplineId', 'iplinePackageSearch']
         )
-        queryset, order_by_field = super(IpLinePackageApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(IpLinePackageApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if iplinepackageid is not None:
             queryset = queryset.filter(pk=iplinepackageid)
@@ -1238,7 +1309,10 @@ class ScriptApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['scriptId', 'scriptSearch']
         )
-        queryset = super(ScriptApiListView, self).get_queryset().filter(owner=self.request.user)
+        queryset = super(ScriptApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
         order_by_field = self.get_ordering()
 
         if scriptid is not None:
@@ -1361,7 +1435,10 @@ class ScriptLogApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['clusterId', 'hostgroupId', 'hostId', 'scriptId', 'triggerMode', 'timedtaskId']
         )
-        queryset = super(ScriptLogApiListView, self).get_queryset().filter(owner=self.request.user)
+        queryset = super(ScriptLogApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
         order_by_field = self.get_ordering()
         condition_and_list = Q()
         if hostid:
@@ -1600,7 +1677,10 @@ class TimedTaskApiListView(LoginRequiredMixin, JSONListView):
             ['timedtaskId', 'crontabId', 'intervalId', 'timedtaskSearch']
         )
         order_by_field = self.get_ordering()
-        queryset = super(TimedTaskApiListView, self).get_queryset().filter(owner=self.request.user)
+        queryset = super(TimedTaskApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
 
         if timedtaskid is not None:
             queryset = queryset.filter(pk=timedtaskid)
@@ -2018,7 +2098,11 @@ class TaskWorkFlowApiListView(LoginRequiredMixin, JSONListView):
             lambda field: self.request.GET.get(field, None),
             ['taskworkflowId', 'taskworkflowSearch']
         )
-        queryset, order_by_field = super(TaskWorkFlowApiListView, self).get_queryset(), self.get_ordering()
+        queryset = super(TaskWorkFlowApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
 
         if taskworkflowid is not None:
             queryset = queryset.filter(pk=taskworkflowid)
@@ -2069,53 +2153,841 @@ class TaskWorkFlowManageView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class DashboardScreenListApiView(LoginRequiredMixin, JSONListView):
-    nodes = []
+class DashBoardScreenDefaultView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/dashboardscreen_default.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenDefaultView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class DashBoardScreenCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/dashboardscreen_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenCreateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class DashBoardScreenUpdateView(LoginRequiredMixin, DetailView):
+    model = DashBoardScreen
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/dashboardscreen_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class DashBoardScreenDetailView(LoginRequiredMixin, DetailView):
+    pk_url_kwarg = 'id'
+    model = DashBoardScreen
+    template_name = 'xm2cloud_cmp/dashboardscreen_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class DashBoardScreenApiListView(LoginRequiredMixin, JSONListView):
     model = DashBoardScreen
 
-    def get_children(self, obj, nodes):
-        nodes.append({'id': obj.pk, 'text': obj.name, 'children': []})
-        for index, child in enumerate(obj.children.all()):
-            nodes[0]['children'].append({'id': child.pk, 'text': child.name, 'children': []})
-            if not child.children.count():
-                continue
-            self.get_children(child, nodes)
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
 
     def get_ordering(self):
-        return 'name'
+        sort = self.get_user_sort()
+        order = self.get_user_order()
 
-    def get_q(self):
-        return Q(parent__isnull=True)
+        return '{0}{1}'.format(order, sort)
 
     def get_queryset(self):
-        queryset = super(DashboardScreenListApiView, self).get_queryset()
-        q = self.get_q()
+        queryset = super(DashBoardScreenApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
         order_by = self.get_ordering()
 
-        return queryset.filter(q).order_by(order_by)
+        return queryset.order_by(order_by)
 
     def get_data(self, **context):
-        context = super(DashboardScreenListApiView, self).get_data(**context)
-        results = []
+        context = super(DashBoardScreenApiListView, self).get_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        objects_list = context['object_list']
 
-        for obj in context['object_list']:
-            self.nodes = []
-            self.get_children(obj, self.nodes)
-
-            results.extend(self.nodes)
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes
+            })
 
         return results
 
 
-class DashboardScreenCreateApiView(LoginRequiredMixin, JSONCreateView):
-    pass
+class DashBoardScreenApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = DashBoardScreen
+    fields = ['name', 'notes']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
 
 
-class DashboardScreenUpdateApiView(LoginRequiredMixin, JSONUpdateView):
-    pass
+class DashBoardScreenApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = DashBoardScreen
+    pk_url_kwarg = 'id'
+    fields = ['name', 'notes']
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
 
 
-class DashboardScreenDeleteApiView(LoginRequiredMixin, JSONDeleteView):
-    pass
+class DashBoardScreenApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = DashBoardScreen
+    pk_url_kwarg = 'id'
 
 
+class DashBoardScreenTargetCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/dashboardscreentarget_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenTargetCreateView, self).get_context_data(**kwargs)
+        context.update({
+        })
+        return context
+
+
+class DashBoardScreenTargetUpdateView(LoginRequiredMixin, DetailView):
+    pk_url_kwarg = 'id'
+    model = DashBoardScreenTarget
+    template_name = 'xm2cloud_cmp/dashboardscreentarget_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(DashBoardScreenTargetUpdateView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class DashBoardScreenTargetApiListView(LoginRequiredMixin, JSONListView):
+    model = DashBoardScreenTarget
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'weight')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_queryset(self):
+        queryset = super(DashBoardScreenTargetApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
+
+        return queryset.order_by(order_by_field)
+
+    def get_data(self, **context):
+        context = super(DashBoardScreenTargetApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'weight': obj.weight,
+                'metrics': obj.metrics,
+                'charttype': obj.charttype,
+                'aggregators': obj.aggregators,
+                'is_compared': obj.is_compared,
+                'screen_id': obj.screen and obj.screen.pk or None
+            })
+
+        return results
+
+
+class DashBoardScreenTargetApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = DashBoardScreenTarget
+    fields = ['name', 'notes', 'metrics', 'aggregators', 'is_compared', 'screen']
+
+    def get_hosts(self):
+        host_ids = self.request.POST.getlist('hosts', [])
+
+        return Host.objects.filter(pk__in=host_ids)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.hosts = self.get_hosts()
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class DashBoardScreenTargetApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = DashBoardScreenTarget
+    pk_url_kwarg = 'id'
+    fields = ['name', 'notes', 'metrics', 'aggregators', 'is_compared', 'screen']
+
+    def get_hosts(self):
+        host_ids = self.request.POST.getlist('hosts', [])
+
+        return Host.objects.filter(pk__in=host_ids)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.hosts = self.get_hosts()
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class DashBoardScreenTargetApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = DashBoardScreenTarget
+    pk_url_kwarg = 'id'
+
+    def get_host(self):
+        host_id = self.request.POST.get('host', '')
+
+        return Host.objects.filter(pk=host_id).first()
+
+    def delete(self, request, *args, **kwargs):
+        host = self.get_host()
+        if not host:
+            return super(DashBoardScreenTargetApiDeleteView, self).delete(request, *args, **kwargs)
+        self.get_object().hosts.remove(host)
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class AlarmStrategyManageView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmstrategy_manage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyManageView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class MessageTopicListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/messagetopics.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(MessageTopicListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class MessageTopicApiListView(LoginRequiredMixin, JSONListView):
+    model = MessageTopic
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        messagetopicid, messagetopicsearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['messagetopicId', 'messagetopicSearch']
+        )
+        queryset = super(MessageTopicApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
+
+        if messagetopicid is not None:
+            queryset = queryset.filter(pk=messagetopicid)
+            return queryset.order_by(order_by_field)
+
+        if messagetopicsearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=messagetopicsearch),
+                Q(notes__contains=messagetopicsearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(MessageTopicApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'alarmstrategies': obj.alarmstrategy_set.count(),
+                'messagesubscribers': obj.messagesubscriber_set.count(),
+                'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+        return results
+
+
+class AlarmHistoryListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmhistories.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmHistoryListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmHistoryDetailView(LoginRequiredMixin, DetailView):
+    model = AlarmHistory
+    pk_url_kwarg = 'id'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmHistoryDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmHistoryApiListView(LoginRequiredMixin, JSONListView):
+    model = AlarmHistory
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        alarmhistoryid, alarmhistorysearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['alarmhistoryId', 'alarmhistorySearch']
+        )
+        queryset = super(AlarmHistoryApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
+
+        if alarmhistoryid is not None:
+            queryset = queryset.filter(pk=alarmhistoryid)
+            return queryset.order_by(order_by_field)
+
+        if alarmhistorysearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=alarmhistorysearch),
+                Q(error__contains=alarmhistorysearch),
+                Q(notes__contains=alarmhistorysearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(AlarmHistoryApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'error': obj.error,
+                'notes': obj.notes,
+                'host_id': obj.host.pk,
+                'host_name': obj.host.name,
+                'acknowledges': obj.acknowledge_set.count(),
+                'alarmstrategy_grade': obj.alarmstrategy.grade,
+                'alarmstrategy_id': obj.alarmstrategy.sevent_uuid,
+                'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'alarmstrategy_topic_id': obj.alarmstrategy.topic and obj.alarmstrategy.topic.pk or None,
+                'alarmstrategy_topic_name': obj.alarmstrategy.topic and obj.alarmstrategy.topic.name or None,
+            })
+
+        return results
+
+
+class AlarmStrategyListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmstrategies.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmstrategy_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyCreateView, self).get_context_data(**kwargs)
+        context.update({
+            'hosts': Host.objects.all()
+        })
+        return context
+
+
+class AlarmStrategyUpdateView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategy
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/alarmstrategy_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyUpdateView, self).get_context_data(**kwargs)
+        context.update({
+            'hosts': Host.objects.all(),
+            'crontabs': CrontabSchedule.objects.all(),
+            'intervals': IntervalSchedule.objects.all(),
+            'messagetopics': MessageTopic.objects.all()
+        })
+        return context
+
+
+class AlarmStrategyDetailView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategy
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/alarmstrategy_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyDeleteView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategy
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    template_name = 'xm2cloud_cmp/alarmstrategy_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyApiListView(LoginRequiredMixin, JSONListView):
+    model = AlarmStrategy
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'last_run_at')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        alarmstrategyid, alarmstrategygroupid, alarmstrategysearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['alarmstrategyId', 'alarmstrategygroupId', 'alarmstrategySearch']
+        )
+        queryset = super(AlarmStrategyApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
+
+        if alarmstrategyid is not None:
+            queryset = queryset.filter(pk=alarmstrategyid)
+            return queryset.order_by(order_by_field)
+
+        if alarmstrategygroupid is not None:
+            queryset = queryset.filter(alarmstrategygroup__pk=alarmstrategygroupid).distinct()
+
+        if alarmstrategysearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=alarmstrategysearch),
+                Q(rules__contains=alarmstrategysearch),
+                Q(notes__contains=alarmstrategysearch),
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(AlarmStrategyApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'grade': obj.grade,
+                'rules': obj.rules,
+                'enabled': obj.enabled,
+                'hosts': obj.hosts.count(),
+                'sevent_uuid': obj.sevent_uuid,
+                'total_run_count': obj.total_run_count,
+                'crontab_id': obj.crontab and obj.crontab.pk or None,
+                'interval_id': obj.interval and obj.interval.pk or None,
+                'crontab_hour': obj.crontab and obj.crontab.hour or None,
+                'crontab_minute': obj.crontab and obj.crontab.minute or None,
+                'interval_every': obj.interval and obj.interval.every or None,
+                'interval_period': obj.interval and obj.interval.period or None,
+                'crontab_day_of_week': obj.crontab and obj.crontab.day_of_week or None,
+                'crontab_day_of_month': obj.crontab and obj.crontab.day_of_month or None,
+                'crontab_month_of_year': obj.crontab and obj.crontab.month_of_year or None,
+                'last_run_at': obj.last_run_at and obj.last_run_at.strftime('%Y-%m-%d %H:%M:%S') or None,
+                'date_changed': obj.date_changed and obj.date_changed.strftime('%Y-%m-%d %H:%M:%S') or None
+            })
+
+        return results
+
+
+class AlarmStrategyApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = AlarmStrategy
+    fields = ['name', 'interval', 'crontab', 'enabled', 'rules', 'notes', 'grade', 'hosts', 'topic',
+              'alarmstrategygroup']
+
+    def get_uuid_pk(self, obj):
+        return str(obj and obj.pk or '')
+
+    def get_task_kwargs(self):
+        data = {
+            'owner': self.get_uuid_pk(self.request.user),
+            'alarmstrategy': str(self.object.sevent_uuid)
+        }
+
+        return json.dumps(data)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.kwargs = self.get_task_kwargs()
+        self.object.task = 'executor.analysetrigger'
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class AlarmStrategyApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = AlarmStrategy
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+    fields = ['name', 'interval', 'crontab', 'enabled', 'rules', 'notes', 'grade', 'hosts', 'topic',
+              'alarmstrategygroup']
+
+    def get_uuid_pk(self, obj):
+        return str(obj and obj.pk or '')
+
+    def get_task_kwargs(self):
+        data = {
+            'owner': self.get_uuid_pk(self.request.user),
+            'alarmstrategy': str(self.object.sevent_uuid)
+        }
+
+        return json.dumps(data)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.kwargs = self.get_task_kwargs()
+        self.object.task = 'executor.analysetrigger'
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class AlarmStrategyApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = AlarmStrategy
+    slug_url_kwarg = 'slug'
+    slug_field = 'sevent_uuid'
+
+
+class AlarmStrategyGroupListView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmstrategygroups.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyGroupListView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyGroupCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'xm2cloud_cmp/alarmstrategygroup_create.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyGroupCreateView, self).get_context_data(**kwargs)
+        context.update({
+            'alarmstrategies': AlarmStrategy.objects.all()
+        })
+        return context
+
+
+class AlarmStrategyGroupUpdateView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategyGroup
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/alarmstrategygroup_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyGroupUpdateView, self).get_context_data(**kwargs)
+        context.update({
+            'alarmstrategies': AlarmStrategy.objects.all()
+        })
+        return context
+
+
+class AlarmStrategyGroupDetailView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategyGroup
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/alarmstrategygroup_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyGroupDetailView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyGroupDeleteView(LoginRequiredMixin, DetailView):
+    model = AlarmStrategyGroup
+    pk_url_kwarg = 'id'
+    template_name = 'xm2cloud_cmp/alarmstrategygroup_delete.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(AlarmStrategyGroupDeleteView, self).get_context_data(**kwargs)
+        context.update({
+
+        })
+        return context
+
+
+class AlarmStrategyGroupApiListView(LoginRequiredMixin, JSONListView):
+    model = AlarmStrategyGroup
+
+    def get_user_sort(self):
+        return self.request.GET.get('sort', 'update_time')
+
+    def get_user_order(self):
+        order = self.request.GET.get('order', 'desc')
+
+        return (order == 'desc') and '-' or ''
+
+    def get_ordering(self):
+        sort = self.get_user_sort()
+        order = self.get_user_order()
+
+        return '{0}{1}'.format(order, sort)
+
+    def get_queryset(self):
+        alarmstrategyid, alarmstrategygroupid, alarmstrategygroupsearch = map(
+            lambda field: self.request.GET.get(field, None),
+            ['alarmstrategyid', 'alarmstrategygroupId', 'alarmstrategygroupSearch']
+        )
+        queryset = super(AlarmStrategyGroupApiListView, self).get_queryset().filter(owner__in=[
+            self.request.user,
+            self.request.user.profile.parent
+        ])
+        order_by_field = self.get_ordering()
+
+        if alarmstrategygroupid is not None:
+            queryset = queryset.filter(pk=alarmstrategygroupid)
+            return queryset.order_by(order_by_field)
+
+        if alarmstrategyid is not None:
+            queryset = queryset.filter(alarmstrategy__sevent_uuid=alarmstrategyid)
+
+        if alarmstrategygroupsearch is not None:
+            condition_or_list = Q()
+            map(lambda q: condition_or_list.add(q, Q.OR), [
+                Q(name__contains=alarmstrategygroupsearch),
+                Q(notes__contains=alarmstrategygroupsearch)
+            ])
+            queryset = queryset.filter(condition_or_list).distinct()
+
+        return queryset.order_by(order_by_field)
+
+    def get_paginate_range(self, queryset):
+        page = int(self.request.GET.get('page') or 1)
+        rows = int(self.request.GET.get('rows') or queryset.count())
+
+        return (page - 1) * rows, page * rows
+
+    def get_data(self, **context):
+        context = super(AlarmStrategyGroupApiListView, self).get_context_data(**context)
+        results = {'total': context['object_list'].count(), 'rows': []}
+        page, rows = self.get_paginate_range(context['object_list'])
+        objects_list = context['object_list'][page: rows]
+
+        for obj in objects_list:
+            results['rows'].append({
+                'id': obj.pk,
+                'name': obj.name,
+                'notes': obj.notes,
+                'alarmstrategies': obj.alarmstrategy_set.count(),
+                'update_time': obj.update_time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+        return results
+
+
+class AlarmStrategyGroupApiCreateView(LoginRequiredMixin, JSONCreateView):
+    model = AlarmStrategyGroup
+    fields = ['name', 'notes']
+
+    def get_alarmstrategy_set(self):
+        alarmstrategy_ids = self.request.POST.getlist('alarmstrategy_set', [])
+
+        return AlarmStrategy.objects.filter(sevent_uuid__in=alarmstrategy_ids)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        alarmstrategy_set = self.get_alarmstrategy_set()
+        self.object.alarmstrategy_set.add(*alarmstrategy_set)
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class AlarmStrategyGroupApiUpdateView(LoginRequiredMixin, JSONUpdateView):
+    model = AlarmStrategyGroup
+    pk_url_kwarg = 'id'
+    fields = ['name', 'notes']
+
+    def get_alarmstrategy_set(self):
+        alarmstrategy_ids = self.request.POST.getlist('alarmstrategy_set', [])
+
+        return AlarmStrategy.objects.filter(sevent_uuid__in=alarmstrategy_ids)
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.object.owner = self.request.user
+        self.object.alarmstrategy_set = self.get_alarmstrategy_set()
+        self.object.save()
+
+        data = {'next': self.get_success_url()}
+
+        return JsonResponse(data, status=200)
+
+
+class AlarmStrategyGroupApiDeleteView(LoginRequiredMixin, JSONDeleteView):
+    model = AlarmStrategyGroup
+    pk_url_kwarg = 'id'

@@ -1,0 +1,329 @@
+{% load static %}
+{% load enhance %}
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>图表[ {{ object.name }} ]</span>
+    </div>
+    <div class="page-body">
+        <div class="detail-tabs">
+            <div class="charts">
+                {% if object.iscompared.count %}
+                    <div class="charts-data">
+                    <fieldset>
+                        <legend>
+                            聚合区( <span class="link-underline">{{ object.iscompared.count }}</span> )
+                        </legend>
+                        {% for target in object.iscompared.all %}
+                            <div class="chart {% cycle 'lf' 'rt' %}">
+                                <div class="chart-tool">
+                                    <div class="title lf">{{ target.name }}</div>
+                                    <div class="tools rt">
+                                        <a data-id="{{ target.pk }}" data-action="edit"
+                                           data-target="{{ target.pk }}" data-host=""
+                                           href="#" class="chart-button easyui-linkbutton button-white normal-button">
+                                            <i class="fa fa-pencil fa-fw" aria-hidden="true"></i>
+                                        </a>
+                                        <a data-id="{{ target.pk }}" data-action="delete"
+                                           data-target="{{ target.pk }}" data-host=""
+                                           href="#" class="chart-button easyui-linkbutton button-white normal-button">
+                                            <i class="fa fa-trash-o fa-fw" aria-hidden="true"></i>
+                                        </a>
+                                        <a data-id="{{ target.pk }}" data-action="export"
+                                           data-target="{{ target.pk }}" data-host=""
+                                           href="#" class="chart-button easyui-linkbutton button-white normal-button">
+                                            <i class="fa fa-download fa-fw" aria-hidden="true"></i>
+                                        </a>
+                                        <a data-id="{{ target.pk }}" data-action="refresh"
+                                           data-target="{{ target.pk }}" data-host=""
+                                           href="#" class="chart-button easyui-linkbutton button-white normal-button">
+                                            <i class="fa fa-refresh fa-fw" aria-hidden="true"></i>
+                                        </a>
+                                    </div>
+                                    <div class="clear"></div>
+                                </div>
+                                <div class="chart-data" aggregators="{{ target.aggregators }}" metrics="{{ target.metrics }}"
+                                     hosts="{{ target.hosts|values_list:'pk'|join:',' }}" charttype="{{ target.charttype }}"
+                                     name="" id="{{ target.pk }}">
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </fieldset>
+                </div >
+                {% endif %}
+                <div class="clear"></div>
+                {% if object.uncompared.count %}
+                    <div class="charts-data">
+                    <fieldset>
+                        <legend>
+                            非聚合( <span class="link-underline">{{ object.uncompared.count }}</span> )
+                        </legend>
+                        {% for target in object.uncompared.all  %}
+                            {% for host in target.hosts.all %}
+                                <div class="chart {% cycle 'lf' 'rt' %}">
+                                    <div class="chart-tool">
+                                        <div class="title lf">{{ target.name }}-{{ host.name }}</div>
+                                        <div class="tools rt">
+                                            <a data-id="{{ target.pk }}_{{ host.pk }}" data-action="edit" href="#"
+                                               data-target="{{ target.pk }}" data-host="{{ host.pk }}"
+                                               class="chart-button easyui-linkbutton button-white normal-button">
+                                                <i class="fa fa-pencil fa-fw" aria-hidden="true"></i>
+                                            </a>
+                                            <a data-id="{{ target.pk }}_{{ host.pk }}" data-action="delete" href="#"
+                                               data-target="{{ target.pk }}" data-host="{{ host.pk }}"
+                                               class="chart-button easyui-linkbutton button-white normal-button">
+                                                <i class="fa fa-trash-o fa-fw" aria-hidden="true"></i>
+                                            </a>
+                                            <a data-id="{{ target.pk }}_{{ host.pk }}" data-action="export" href="#"
+                                               data-target="{{ target.pk }}" data-host="{{ host.pk }}"
+                                               class="chart-button easyui-linkbutton button-white normal-button">
+                                                <i class="fa fa-download fa-fw" aria-hidden="true"></i>
+                                            </a>
+                                            <a data-id="{{ target.pk }}_{{ host.pk }}" data-action="refresh" href="#"
+                                               data-target="{{ target.pk }}" data-host="{{ host.pk }}"
+                                               class="chart-button easyui-linkbutton button-white normal-button">
+                                                <i class="fa fa-refresh fa-fw" aria-hidden="true"></i>
+                                            </a>
+                                        </div>
+                                        <div class="clear"></div>
+                                    </div>
+                                    <div class="chart-data" aggregators="{{ target.aggregators }}" hosts="{{ host.pk }}"
+                                         metrics="{{ target.metrics }}" charttype="{{ target.charttype }}"
+                                         name="{{ host.name }}" id="{{ target.pk }}_{{ host.pk }}">
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </fieldset>
+                </div>
+                {% endif %}
+                <div class="clear"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/enhance.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/datetime.js' %}"></script>
+<script type="text/javascript" src="{% static 'xm2cloud_cmp/js/echarts.common.min.js' %}"></script>
+<script type="text/javascript">
+    var chart_map = {}
+        ,_start = '1h-ago'
+        ,_downsample = '30s-avg-nan'
+        ,update_target = $('#update_target')
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,monitor_metrics_query_api = "{% url 'xm2cloud_cmp:api_monitor_metrics_query' %}"
+        ,dashboardscreentarget_update = "{% url 'xm2cloud_cmp:dashboardscreentarget_update' id=0 %}"
+        ,dashboardscreentarget_delete_api = "{% url 'xm2cloud_cmp:api_dashboardscreentarget_delete' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        function render_chart() {
+            var start = arguments[5]
+                ,that = arguments[0]
+                ,hosts = arguments[4]
+                ,metrics = arguments[3]
+                ,charttype = arguments[1]
+                ,aggregators = arguments[2]
+                ,downsample = arguments[6];
+            var _aggregators = []
+                ,_metric_map = {}
+                ,name = $(that).attr('name')
+                ,chart_id = $(that).attr('id')
+                ,_formater_map = {'t_map': {}}
+                ,data = {queries: [], start: start, msResolution: true};
+            if(aggregators.length>0){
+                for(var i=0; i<aggregators.length; i++){
+                    var c=aggregators[i];
+                    for(var j=0; j<metrics.length; j++){
+                        var m=metrics[j];
+                        _aggregators.push(c);
+                        data['queries'].push({
+                            aggregator: c,
+                            metric: m,
+                            downsample: downsample,
+                            filters: [
+                                {
+                                    type: 'literal_or',
+                                    tagk: 'uuid',
+                                    filter: hosts.join('|'),
+                                    groupBy: false
+                                }
+                            ]
+                        })
+                    }
+                }
+            }else{
+                for(var i=0; i<metrics.length; i++) {
+                    var m = metrics[i];
+                    var _metric_tag
+                        ,_metrictags = {};
+                    if(m.startswith('net.if.')){
+                        _metric_tag = 'iface';
+                        _metrictags['iface'] = '*';
+                    }
+                    if(m.startswith('df.bytes.')){
+                        _metric_tag = 'mount';
+                        _metrictags['mount'] = '*';
+                    }
+                    _metric_map[m] = _metric_tag;
+                    for(var j=0;j<hosts.length;j++){
+                        var h = hosts[j];
+                        _metrictags['uuid'] = h;
+                        data['queries'].push({
+                            aggregator: 'avg',
+                            tags: _metrictags,
+                            metric: m,
+                            downsample: downsample
+                        });
+                    }
+                }
+            }
+            var options = {
+                data: JSON.stringify(data),
+                error_width: 501,
+                url: monitor_metrics_query_api,
+                success: function (data) {
+                    var series = []
+                        ,xaxis = {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: []
+                    };
+                    for(var i = 0; i<data.length; i++){
+                        var c = data[i];
+                        if(c.error) continue;
+                        _formater_map['t_map'][c.metric] = (_aggregators[i] || '')+name+' '+c.metric+' '+(_metric_map[c.metric]?c.tags[_metric_map[c.metric]].cut(20):'');
+                        var x_cur = [];
+                        var y_cur = [];
+                        var skeys = [];
+                        $.each(c.dps, function (k, v) {
+                            skeys.push(k);
+                        });
+                        skeys = skeys.sort(function (p, n) {
+                            return parseInt(p)-parseInt(n);
+                        });
+                        for(var j = 0; j<skeys.length; j++){
+                            var c_v = c.dps[skeys[j]];
+                            var c_k = DateUtil.dateToStr('MM-dd HH:mm:ss', new Date(parseInt(skeys[j])));
+                            x_cur.push(c_k);
+                            y_cur.push(c_v);
+                        }
+                        xaxis['data'] = x_cur;
+                        series.push({
+                            name: _formater_map['t_map'][c.metric],
+                            type: 'line',
+                            data: y_cur
+                        });
+                    }
+                    var o = {
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        toolbox: {},
+                        xAxis: xaxis,
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                inside: true,
+                                textStyle: {
+                                    color: function (value, index) {
+                                        return '#999';
+                                    }
+                                }
+                            }
+                        },
+                        series: series
+                    };
+                    chart_map[chart_id] = $._render(chart_id, o);
+                },
+                complete: function () {}
+            };
+            $._ajax(options);
+        }
+        function renderer_charts(){
+            $('.chart-data').each(function () {
+                var charttype = $(this).attr('charttype')
+                    ,str_hosts = $(this).attr('hosts')
+                    ,str_metrics = $(this).attr('metrics')
+                    ,str_aggregators = $(this).attr('aggregators');
+                var hosts = str_hosts.split(',').clean('')
+                    ,metrics = str_metrics.split(',').clean('')
+                    ,aggregators = str_aggregators.split(',').clean('');
+                if(!hosts.length || !metrics.length) return;
+                render_chart(this, charttype, aggregators, metrics, hosts, _start, _downsample);
+            })
+        }
+        renderer_charts();
+        $('a.chart-button').unbind('click').bind('click', function () {
+            var chartid = $(this).attr('data-id')
+                ,host = $(this).attr('data-host')
+                ,target = $(this).attr('data-target')
+                ,action = $(this).attr('data-action');
+            var chart = chart_map[chartid];
+            if(!chart) return;
+            switch (action){
+                case 'edit':
+                    var dashboardscreentarget_update_href = dashboardscreentarget_update.replace('/0/', '/'+target+'/');
+                    $._control('#control', {href: dashboardscreentarget_update_href});
+                    break;
+                case 'delete':
+                    var data = host && {host: host} || {}
+                        ,dashboardscreentarget_delete_url = dashboardscreentarget_delete_api.replace('/0/', '/'+target+'/');
+                    $._ajax({
+                        url: dashboardscreentarget_delete_url,
+                        traditional: true,
+                        error_width: 501,
+                        success: function (data) {
+                            // location.href = data.next;
+                            $._control('#control');
+                        },
+                        complete: function () {},
+                        data: data
+                    });
+                    break;
+                case 'export':
+                    var href = chart.getDataURL({
+                        type:'png',
+                        backgroundColor:'white'
+    	            });
+                    $(this).attr({
+                        href: href,
+                        download: chartid+'.png'
+                    });
+                    break;
+                case 'refresh':
+                    var chartdata = $('#'+chartid);
+                    var charttype = chartdata.attr('charttype')
+                        ,str_hosts = chartdata.attr('hosts')
+                        ,str_metrics = chartdata.attr('metrics')
+                        ,str_aggregators = chartdata.attr('aggregators');
+                    var hosts = str_hosts===''?[]:str_hosts.split(',')
+                        ,metrics = str_metrics===''?[]:str_metrics.split(',')
+                        ,aggregators = str_aggregators===''?[]:str_aggregators.split(',');
+                        if(!hosts.length || !metrics.length) return;
+                    render_chart(chartdata, charttype, aggregators, metrics, hosts, _start, _downsample);
+                    break;
+            }
+
+        });
+        update_target.unbind('click').bind('click', function () {
+            renderer_charts();
+        });
+        $('a.period-button').unbind('click').bind('click', function () {
+            _start = $(this).attr('data-start');
+            _downsample= $(this).attr('data-downsample');
+
+            renderer_charts();
+        });
+        setInterval(function () {
+            renderer_charts();
+        }, 300000)
+    })
+</script>

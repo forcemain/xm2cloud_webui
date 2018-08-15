@@ -1,0 +1,56 @@
+<div class="install-script">
+<pre>
+echo "=> Start set environs"
+yum -y install epel-release
+yum -y install gcc python-devel python-pip wget lrzsz
+
+echo "=> Start set hostname"
+hostname {{ object.name }}
+echo {{ object.name }} > /etc/hostname
+
+echo "=> Start set conffile"
+test -d /etc/xm2cloud_agent/ || mkdir -p /etc/xm2cloud_agent/
+cat &lt;&lt; EOF > /etc/xm2cloud_agent/user_data.json
+{{ userdata }}
+EOF
+
+echo "=> Start check supervisord"
+test -d /etc/supervisord/ || {
+    pip install supervisor
+    mkdir -p /etc/supervisord
+    cd /etc/
+    wget http://deploy_src.xmeye.net/supervisord.conf -O supervisord.conf
+    cd /etc/init.d/
+    wget http://deploy_src.xmeye.net/supervisord -O supervisord
+    chkconfig --add supervisord
+    chkconfig supervisord on
+    chmod u+x supervisord
+    /etc/init.d/supervisord restart
+    service supervisord restart
+}
+
+echo "=> Start apply config file"
+test -f /etc/supervisord/xm2cloud_agent.conf && {
+    supervisorctl stop xm2cloud_agent
+    kill -9 `ps -ef|grep xm2cloud_agent|grep -v grep|awk '{print $2}'`
+    cd /xm-workspace/xm-apps/
+    rm -rf xm2cloud_agent
+}
+
+echo "=> Start install xm2cloud_agent"
+test -d /xm-workspace/xm-apps/ || mkdir -p /xm-workspace/xm-apps/
+cd /xm-workspace/xm-apps/
+wget http://deploy_src.xmeye.net/xm2cloud_agent.tar.gz -O xm2cloud_agent.tar.gz
+tar -zxvf xm2cloud_agent.tar.gz
+rm -rf xm2cloud_agent.tar.gz
+cd xm2cloud_agent/
+pip install -r requirements.txt
+cd /etc/supervisord
+wget http://deploy_src.xmeye.net/xm2cloud_agent.conf -O xm2cloud_agent.conf
+test -d /xm-workspace/xm-logs/xm2cloud_agent/ || mkdir -p /xm-workspace/xm-logs/xm2cloud_agent/
+supervisorctl update
+supervisorctl restart xm2cloud_agent
+
+echo "=> Install xm2cloud_agent success"
+</pre>
+</div>

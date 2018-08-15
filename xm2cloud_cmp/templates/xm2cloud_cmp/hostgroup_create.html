@@ -92,29 +92,31 @@
     $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
 
     $(function () {
-        var _html;
-        var _load;
+        var _html
+            ,_load
+            ,left_select = $('#left_select')
+            ,right_select = $('#right_select');
         $('#l2r').linkbutton({
             onClick: function () {
-                $('#left_select>option').each(function () {
+                left_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#right_select'));
+                        $(this).remove().appendTo(right_select);
                     }
                 })
             }
         });
         $('#r2l').linkbutton({
             onClick: function () {
-                $('#right_select>option').each(function () {
+                right_select.find('option').each(function () {
                     if($(this).is(':selected')){
-                        $(this).remove().appendTo($('#left_select'));
+                        $(this).remove().appendTo(left_select);
                     }
                 })
             }
         });
         $('#left_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#left_select>option').each(function () {
+                left_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -125,7 +127,7 @@
         });
         $('#right_search').textbox({
             onChange: function (newValue, oldValue) {
-                $('#right_select>option').each(function () {
+                right_select.find('option').each(function () {
                     if($(this).text().indexOf(newValue)>=0){
                         $(this).removeAttr('hidden');
                     }else{
@@ -141,7 +143,7 @@
                     ,notes = $('#notes').textbox('getValue')
                     ,cluster = $('#cluster').combobox('getValue')
                     ,alertcontactgroup = $('#alertcontactgroup').combobox('getValue')
-                    ,host_set = $('#right_select').find('option').map(function(){return $(this).val()}).get();
+                    ,host_set = $('#right_select').find('option:visible').map(function(){return $(this).val()}).get();
 
                 if (!_html) _html = $(that).find('span:last').html();
                 _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
@@ -152,7 +154,6 @@
                     traditional: true,
                     error_width: 501,
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
                         $._control('#control', {href: hostgroup_list});
                     },

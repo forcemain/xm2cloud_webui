@@ -64,7 +64,6 @@
                                         execute_state.html('<i class="fa fa-circle-o-notch fa-spin font-orange"></i>');
                                     },
                                     success: function (data) {
-                                        console.log(location.href+':'+data);
                                         $._control('#control', {href: script_logs});
                                     },
                                     complete: function () {
@@ -171,7 +170,6 @@
                 {
                     field:'task_state',width:'5%',title:'执行状态',sortable:true,
                     formatter: function(value, row, index){
-                        console.log(row);
                         var state = '未知'
                             ,icon_class
                             ,span_class;

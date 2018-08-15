@@ -1,0 +1,163 @@
+<div class="nav-page-container">
+    <div class="page-title">
+        <span>确认变更 ?</span>
+    </div>
+    <div class="page-notice">
+        请完善以下信息,方便我们更好的为您服务.
+    </div>
+    <div class="page-body">
+        <fieldset>
+            <legend>基本信息</legend>
+            <div class="form-group">
+                <div class="lf form-label">操作用户 : </div>
+                <div class="lf form-input">{{ request.user.username|capfirst }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">名称 : </div>
+                <div class="lf form-input">
+                    <input id="name" name="name" class="easyui-textbox" value="{{ object.name }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">备注 : </div>
+                <div class="lf form-input">
+                    <input id="notes" name="notes" class="easyui-textbox" value="{{ object.notes }}" data-options="width:'380',height:'32'">
+                </div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">上次修改 : </div>
+                <div class="lf form-input">{{ object.update_time|date:'Y-m-d H:i:s' }}</div>
+            </div>
+            <div class="clear"></div>
+            <div class="form-group">
+                <div class="lf form-label">关联策略 : </div>
+                <div class="lf form-input">
+                    <div class="lf">
+                        <input id="left_search" name="left_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="left_select" class="left-select" multiple="multiple">
+                            {% for alarmstrategy in alarmstrategies %}
+                                {% if alarmstrategy not in object.alarmstrategy_set.all %}
+                                    <option value="{{ alarmstrategy.sevent_uuid }}">{{ alarmstrategy.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lf middle-tools">
+                        <p><a id="l2r" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &gt; </a></p>
+                        <p><a id="r2l" href="#" class="middle-button easyui-linkbutton button-white normal-button"> &lt; </a></p>
+                    </div>
+                    <div class="lf">
+                        <input id="right_search" name="right_search" class="easyui-textbox" prompt="Filter" value="" data-options="width:'380',height:'32'">
+                        <div class="clear"></div>
+                        <select id="right_select" class="right-select" multiple="multiple">
+                            {% for alarmstrategy in object.alarmstrategy_set.all %}
+                                <option value="{{ alarmstrategy.sevent_uuid }}">{{ alarmstrategy.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </fieldset>
+    </div>
+    <div class="page-foot">
+        <div class="operation rt">
+            <a id="goback_alarmstrategygroup" href="#" class="easyui-linkbutton button-white no-border-radius">返回</a>
+            <a id="update_alarmstrategygroup" href="#" class="easyui-linkbutton button-white no-border-radius">提交</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selected_id = "{{ object.pk }}"
+        ,ajax_csrf_token = "{{ csrf_token }}"
+        ,alarmstrategygroup_list = "{% url 'xm2cloud_cmp:alarmstrategygroups' %}"
+        ,alarmstrategygroup_update_api = "{% url 'xm2cloud_cmp:api_alarmstrategygroup_update' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    $(function () {
+        var _html
+            ,_load
+            ,left_select = $('#left_select')
+            ,right_select = $('#right_select');
+
+        $('#l2r').linkbutton({
+            onClick: function () {
+                left_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(right_select);
+                    }
+                })
+            }
+        });
+        $('#r2l').linkbutton({
+            onClick: function () {
+                right_select.find('option').each(function () {
+                    if($(this).is(':selected')){
+                        $(this).remove().appendTo(left_select);
+                    }
+                })
+            }
+        });
+        $('#left_search').textbox({
+            onChange: function (newValue, oldValue) {
+                left_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#right_search').textbox({
+            onChange: function (newValue, oldValue) {
+                right_select.find('option').each(function () {
+                    if($(this).text().indexOf(newValue)>=0){
+                        $(this).removeAttr('hidden');
+                    }else{
+                        $(this).attr('hidden', 'hidden');
+                    }
+                })
+            }
+        });
+        $('#update_alarmstrategygroup').linkbutton({
+            onClick: function () {
+                var that = this
+                    ,name = $('#name').textbox('getValue')
+                    ,notes = $('#notes').textbox('getValue')
+                    ,alarmstrategy_set = right_select.find('option:visible').map(function(){return $(this).val()}).get();
+
+                if (!_html) _html = $(that).find('span:last').html();
+                _load = '<i class="fa fa-circle-o-notch fa-spin"></i>' + ' ' + _html;
+                $(that).find('span:last').html(_load);
+
+                var alarmstrategygroup_update_url = alarmstrategygroup_update_api.replace('/0/', '/' + selected_id + '/');
+                $._ajax({
+                    url: alarmstrategygroup_update_url,
+                    error_width: 501,
+                    traditional: true,
+                    success: function (data) {
+                        // location.href = data.next;
+                        $._control('#control', {href: alarmstrategygroup_list});
+                    },
+                    complete: function () {
+                        $(that).find('span:last').html(_html);
+                    },
+                    data: {name: name, notes: notes, alarmstrategy_set: alarmstrategy_set}
+                })
+            }
+        });
+        $('#goback_alarmstrategygroup').linkbutton({
+            onClick: function () {
+                $._control('#control', {href: alarmstrategygroup_list});
+            }
+        });
+    })
+</script>

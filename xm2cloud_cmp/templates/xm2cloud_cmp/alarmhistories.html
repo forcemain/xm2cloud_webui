@@ -1,0 +1,125 @@
+{% load static %}
+<table id="alarmhistory_datagrid" class="easyui-datagrid" border="false" fit="true"></table>
+
+<script type="text/javascript">
+    var ajax_csrf_token = "{{ csrf_token }}"
+        ,host_manage = "{% url 'xm2cloud_cmp:host_manage' %}"
+        ,control_page = "{% url 'xm2cloud_cmp:alarmhistories' %}"
+        ,alarmstrategy_manage = "{% url 'xm2cloud_cmp:alarmstrategy_manage' %}"
+        ,alarmhistory_list_api = "{% url 'xm2cloud_cmp:api_alarmhistory_list' %}"
+        ,alarmhistory_detail = "{% url 'xm2cloud_cmp:alarmhistory_detail' id=0 %}";
+
+    $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
+
+    function get_query_params() {
+        var params = $.url(location.href).param();
+        params['alarmhistorySearch'] = $('#global_search').textbox('getValue');
+
+        return params;
+    }
+
+    $(function () {
+        $('a.tool-button').unbind('click');
+        $._datagrid('#alarmhistory_datagrid', {
+            url: alarmhistory_list_api,
+            onLoadSuccess: function (data) {
+                $.each($(this).datagrid('getRows'), function(index, item){
+                    var mb_id = '#mb_alarmhistory_'+item.id;
+                    var mt_id = '#mt_alarmhistory_'+item.id;
+                    $(mb_id).menubutton({menu: mt_id});
+                    $(mt_id+' .menu-more').unbind('click').bind('click', function () {
+                        var _t = $(this).attr('_t');
+                        switch(_t){
+                            case 'alarm_detail':
+                                var eid = 'editor_'+item.id;
+                                alert('告警详情: '+eid);
+                                break;
+                        }
+                    });
+                });
+                $('.alarmhistory-detail').unbind('click').bind('click', function () {
+                    var _t = $(this).attr('_t');
+                    $._control('#control', {href: _t});
+                })
+            },
+            queryParams: get_query_params(),
+            columns:[[
+                {
+                    field:'ck',checkbox:true,align:'center'
+                },
+                {
+                    field: 'update_time', width:'12%',title:'发生时间',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = alarmhistory_detail.replace('/0/', '/' + row.id + '/');
+                        return '<a _t="'+_t+'" title="'+row.notes+'" class="easyui-tooltip alarmhistory-detail link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'alarmstrategy_grade',width:'8%',title:'重要级别',align:'center',
+                    styler: function(value,row,index){
+                        switch (value){
+                            case 1:
+                                return 'background-color:#7499FF;color:#00268e;';
+                            case 2:
+                                return 'background-color:#FFA059;color:#733100;';
+                            case 3:
+                                return 'background-color:#E97659;color:#52190b;';
+                            case 4:
+                                return 'background-color:#FF0000;color:#000000;';
+                        }
+                    },
+                    formatter: function(value, row, index){
+                        switch (value){
+                            case 1:
+                                return '提示';
+                            case 2:
+                                return '次要';
+                            case 3:
+                                return '重要';
+                            case 4:
+                                return '紧急';
+                        }
+                    }
+                },
+                {
+                    field: 'host_name', width:'12%',title:'主机',sortable:true,
+                    formatter: function(value, row, index){
+                        var _t = host_manage+'?alarmhistoryId='+row.id+'&navName=host';
+                        return '<a target="_blank" href="'+_t+'" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'name',width:'35%',title:'问题',sortable:true,
+                    formatter: function(value, row, index){
+                        return '<a target="_blank" class="link-underline">'+value+'</a>';
+                    }
+                },
+                {
+                    field:'actions',width:'3%',title:'动作',align:'center',
+                    formatter: function(value, row, index){
+                        return '<a target="_blank" class="link-underline">0</a>';
+                    }
+                },
+                {
+                    field:'acknowledges',width:'5%',title:'确认',sortable:true,
+                    formatter: function(value, row, index){
+                        if(value > 0){
+                            return '<a class="link-underline"><span class="font-green">Yes '+value+'</span></a>';
+                        }
+                        return '<a class="link-underline"><span class="font-red">No</span></a>';
+                    }
+                },
+                {
+                    field:'operation',width:'10%',title:'操作',align:'center',
+                    formatter: function(value, row, index){
+                        var tools = '<a id="mb_alarmhistory_'+row.id+'" class="normal-link">'
+                                  + '<font class="link-underline">更多</font></a>';
+                        var extra = '<div id="mt_alarmhistory_'+row.id+'" style="display: none;">'
+                                  + '<div _t="alarm_detail" class="menu-more">查看详情</div></div>';
+                        return tools + extra;
+                    }
+                }
+            ]]
+        })
+    })
+</script>

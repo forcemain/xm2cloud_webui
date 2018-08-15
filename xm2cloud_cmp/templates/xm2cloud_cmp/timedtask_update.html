@@ -144,6 +144,7 @@
         ,interval_delete = "{% url 'xm2cloud_cmp:interval_delete' id=0 %}"
         ,hostgroup_list_api = "{% url 'xm2cloud_cmp:api_hostgroup_list' %}"
         ,timedtask_update_api = "{% url 'xm2cloud_cmp:api_timedtask_update' slug=0%}";
+    var control_page = "{% url 'xm2cloud_cmp:timedtask_update' slug=0 %}".replace('/0/', '/' + selected_id + '/');
 
     $.ajaxSetup({data: {csrfmiddlewaretoken:  ajax_csrf_token}});
 
@@ -367,9 +368,7 @@
                     url: timedtask_update_url,
                     traditional: true,
                     error_width: 501,
-
                     success: function (data) {
-                        console.log(location.href+':'+data);
                         // location.href = data.next;
                         $._control('#control', {href: timedtask_list});
                     },
