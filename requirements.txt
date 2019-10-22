@@ -178,7 +178,7 @@
 Django == 1.11.5
 
 # xm2cloud_auth/common/checkcode/__init__.py: 8
-Pillow == 4.1.1
+Pillow == 6.2.0
 
 # xm2cloud_cmp/signal/model_task.py: 5
 # xm2cloud_cmp/tasks.py: 5
