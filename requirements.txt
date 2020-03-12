@@ -226,7 +226,7 @@ pika == 0.11.0
 # xm2cloud_auth/common/enhance.py: 7
 # xm2cloud_cmp/common/enhance.py: 7
 # xm2cloud_term/common/enhance.py: 7
-psutil == 5.2.2
+psutil == 5.6.6
 
 # xm2cloud_auth/common/otp/__init__.py: 3
 # xm2cloud_auth/views.py: 5
