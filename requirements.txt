@@ -175,7 +175,7 @@
 # xm2cloud_web/urls.py: 4
 # xm2cloud_web/views.py: 4
 # xm2cloud_webui.py: 16
-Django == 1.11.5
+Django == 1.11.29
 
 # xm2cloud_auth/common/checkcode/__init__.py: 8
 Pillow == 4.1.1
